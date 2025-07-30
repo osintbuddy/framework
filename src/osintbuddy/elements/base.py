@@ -17,6 +17,8 @@ class BaseElement(object):
         element type, such as the node type, label,
         placeholder, and style.
     """
+    element_type: str
+
     def __init__(self, **kwargs):
         self.label: str = ''
         if entity_type := kwargs.get('label'):
@@ -32,9 +34,12 @@ class BaseElement(object):
         base_element['type'] = self.element_type
         return base_element
 
+    def to_dict(self) -> dict[str, str]:
+        ...
+
 class BaseInput(BaseElement):
-    pass
+    ...
 
 
 class BaseDisplay(BaseElement):
-    pass
+    ...

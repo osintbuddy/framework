@@ -1,10 +1,6 @@
-class OBPluginError(Exception):
+class PluginError(Exception):
     pass
 
 
-class NodeInvalidValueError(OBPluginError):
-    pass
-
-
-class NodeMissingValueError(OBPluginError):
+class PluginWarn(PluginError):
     pass
