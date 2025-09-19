@@ -124,26 +124,28 @@ def prepare_run(plugins_path: str | None = None):
 async def run_transform(plugins_path: str, source: str, settings = None, cfg: str | None = None):
     '''
     E.g.
-    ob run -t '{...}'
+ob run -T '{"action":"transform:entity","entity":{"id":"4c755e2b-45d4-48e8-b8c2-c8ed546334ad","type":"telegram_websearch","data":{"label":"telegram_websearch","query":"jerlendds"},"position":{"x":-947.1913273648004,"y":-183.30472176357043},"transform":"To CSE Search"}}'
     '''
     src = json.loads(source)
     prepare_run(plugins_path)
-    transform_label = src.pop("transform")
-    source_entity_label = src.pop("label")
+    entity = src.pop("entity")
+    transform_label = entity.pop("transform")
+    source_entity_label = entity.get("data").get("label")
     plugin = await Registry.get_plugin(source_entity_label)
     if plugin is None:
+        # TODO: Create error handling type {"error": "api", "message": "blah blah"}
         print([])
     else:
         if cfg:
             transform_result = await plugin().run_transform(
                 transform_type=transform_label,
-                entity=source,
+                entity=entity,
                 cfg=cfg
             )
         else:
             transform_result = await plugin().run_transform(
                 transform_type=transform_label,
-                entity=source,
+                entity=entity,
             )
         printjson(transform_result)
 
@@ -171,25 +173,36 @@ class EntityCreate(BaseModel):
     last_edit: str
     source: str | None
 
+
 def list_entities(plugins_path = None):
+    # dev mode plugins...
     import os, sys
     from datetime import datetime
     prepare_run(plugins_path)
-    printjson([dict(
-        label=plugin.label,
-        author=plugin.author,
-        description=plugin.description,
-        last_edit=datetime.utcfromtimestamp(os.path.getmtime(sys.modules[plugin.__module__].__file__ )).strftime('%Y-%m-%d %H:%M:%S'),
-    ) for plugin in Registry.plugins.values()])
+    plugins = []
+    for plugin in Registry.plugins.values():
+        path = f"{sys.modules[plugin.__module__].__file__}"
+        source = open(path, "r").read()
+        last_file_edit = datetime.utcfromtimestamp(os.path.getmtime(path)).strftime('%Y-%m-%d %H:%M:%S')
+        plugins.append(dict(
+            label=plugin.label,
+            author=plugin.author,
+            description=plugin.description,
+            source=source,
+            last_edit=last_file_edit,
+        ))
+    printjson(plugins)
 
 
 def get_blueprints(label: str | None = None, plugins_path: str | None = None):
+    blueprints = {}
     prepare_run(plugins_path)
-    print('fuck me', Registry.plugins, plugins_path)
     if label is None:
         plugins = [Registry.get_plug(to_snake_case(label))
                    for label in Registry.labels]
-        blueprints = [p.blueprint() for p in plugins]
+        for entity in plugins:
+            blueprint = entity.blueprint()
+            blueprints[to_snake_case(blueprint.get('label'))] = blueprint
         printjson(blueprints)
         return blueprints
     plugin = Registry.get_plug(label)

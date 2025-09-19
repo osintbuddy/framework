@@ -191,11 +191,11 @@ class Plugin(object, metaclass=Registry):
         transform_type = to_snake_case(transform_type)
         if isinstance(entity, str):
             entity = json.loads(entity)
-
         entity_id = entity.pop('id')
-        entity_label = entity.pop('label')
+        data = entity.pop("data")
+        entity_label = data.pop("label")
         entity = {
-            to_snake_case(k): v for k, v in entity.items()
+            to_snake_case(k): v for k, v in data.items()
         }
         entity["id"] = entity_id
         entity["label"] = entity_label
@@ -203,7 +203,6 @@ class Plugin(object, metaclass=Registry):
         if self.transforms and self.transforms[transform_type]:
             try:
                 transform_fn = self.transforms[transform_type]
-                print('inside run transform cfg', cfg, entity, type(entity))
                 sig = inspect.signature(transform_fn)
                 if 'cfg' in sig.parameters:
                     result = await transform_fn(
@@ -216,17 +215,17 @@ class Plugin(object, metaclass=Registry):
                         self=self,
                         entity=Vertex(**entity),
                     )
-                edge_label = self.transforms[transform_type]
+                # Pull the declared edge label from the transform function metadata
+                edge_label = getattr(transform_fn, 'edge_label', transform_type)
 
-                if edge_label is None:
-                    edge_label = transform_type
+                # Normalize result to a list of dicts and inject edge_label as a string
                 if not isinstance(result, list):
-                    transform_fn.edge_label = edge_label
+                    if isinstance(result, dict):
+                        result['edge_label'] = edge_label
                     return [result]
-                [
-                    n.__setitem__('edge_label', edge_label)
-                    for n in result
-                ]
+                for n in result:
+                    if isinstance(n, dict):
+                        n['edge_label'] = edge_label
                 return result
             except (Exception, PluginError) as e:
                 raise e
