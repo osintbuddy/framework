@@ -3,7 +3,16 @@ from osintbuddy.elements.base import BaseInput
 
 
 class UploadFileInput(BaseInput):
-    ...
+    element_type: str = "upload"
+
+    def __init__(self, value="", default="", icon="IconAlphabetLatin", **kwargs):
+        super().__init__(**kwargs)
+        self.element = {
+            "icon": icon
+        }
+    def to_dict(self):
+        return self._base_entity_element(**self.element)
+
 
 
 class TextInput(BaseInput):

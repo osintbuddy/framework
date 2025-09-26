@@ -5,12 +5,7 @@ from typing import Any, TypedDict, ClassVar, NewType, TypeAlias, Type, Protocol
 from collections import defaultdict
 from collections.abc import Callable, Awaitable
 from pydantic import BaseModel, ConfigDict
-from transfunctions import (
-    transfunction,
-    sync_context,
-    async_context,
-    generator_context,
-)
+
 from osintbuddy.elements.base import BaseElement
 from osintbuddy.errors import PluginError
 from osintbuddy.utils import to_snake_case
@@ -61,7 +56,7 @@ class Registry(type):
         if name != 'Plugin' and issubclass(cls, Plugin):
             label = cls.label.strip()
 
-            if cls.is_available and label:
+            if cls.show_option and label:
                 if isinstance(cls.author, list):
                     cls.author = ', '.join(cls.author)
                 Registry.ui_labels.append({
@@ -87,21 +82,6 @@ class Registry(type):
         raise PluginError(f"{plugin_label} plugin not found! Make sure it's loaded...")
 
 
-    @classmethod
-    def get_plug(cls, plugin_label: str) -> Any:
-        """
-        Returns the corresponding plugin class for a given plugin_label or
-        'None' if not found.
-
-        :param plugin_label: The label of the plugin to be returned.
-        :return: The plugin class or None if not found.
-        """
-        plugin =  cls.plugins.get(plugin_label)
-        if plugin:
-            return plugin
-        raise PluginError(f"{plugin_label} plugin not found! Make sure it's loaded...")
-
-
 ElementsLayout: TypeAlias = list[BaseElement | list[BaseElement]]
 
 class Plugin(object, metaclass=Registry):
@@ -109,14 +89,19 @@ class Plugin(object, metaclass=Registry):
     OBPlugin is the base class for all plugin classes in this application.
     It provides the required structure and methods for a plugin.
     """
-    elements: ElementsLayout = list()
-    color: str = '#145070'
-    label: str = ''
-    icon: str = 'atom-2'
-    is_available = True
+    version: str
+    # If None, the entity_id is the label as snakecase
+    entity_id: str | None = None
 
-    author = ''
-    description = ''
+    label: str = ''
+    description: str = ''
+    author: str = 'Unknown'
+
+    icon: str = 'atom-2'
+    color: str = '#145070'
+    show_option = True
+
+    elements: ElementsLayout = list()
 
     def __init__(self):
         transforms = self.__class__.__dict__.values()
@@ -130,6 +115,8 @@ class Plugin(object, metaclass=Registry):
             } for func in transforms
             if hasattr(func, 'label')
         ]
+        if self.entity_id == None or len(self.entity_id) == 0:
+            self.entity_id = to_snake_case(self.label)
 
     def __call__(self):
         return self.create()
@@ -149,9 +136,7 @@ class Plugin(object, metaclass=Registry):
     @classmethod
     def blueprint(cls, **kwargs):
         """
-        Generate and return a dictionary representing the plugins ui entity.
-        Includes label, name, color, icon, and a list of all elements
-        for the entity/plugin.
+  
         """
         metaentity = defaultdict(None)
         metaentity['label'] = cls.label
@@ -172,21 +157,14 @@ class Plugin(object, metaclass=Registry):
     @classmethod
     def create(cls, **kwargs):
         """
-        Generate and return a dictionary representing the plugins ui entity.
-        Includes label, name, color, icon, and a list of all elements
-        for the entity/plugin.
+       
         """
         kwargs['label'] = cls.label
         return kwargs
 
     # TODO: rename use to cfg
-    async def run_transform(self, transform_type: str, entity, cfg: dict | None = None) -> Any:
-        """ Return output from a function accepting node data.
-            The function will be called with a single argument, the node data
-            from when a node context menu action is taken - and should return
-            a list of Nodes.
-            None if the plugin doesn't provide a transform
-            for the transform_type.
+    async def run(self, transform_type: str, entity, cfg: dict | None = None) -> Any:
+        """ 
         """
         transform_type = to_snake_case(transform_type)
         if isinstance(entity, str):
@@ -200,8 +178,9 @@ class Plugin(object, metaclass=Registry):
         entity["id"] = entity_id
         entity["label"] = entity_label
 
-        if self.transforms and self.transforms[transform_type]:
-            try:
+        try:   
+            if self.transforms and self.transforms[transform_type]:
+
                 transform_fn = self.transforms[transform_type]
                 sig = inspect.signature(transform_fn)
                 if 'cfg' in sig.parameters:
@@ -227,12 +206,8 @@ class Plugin(object, metaclass=Registry):
                     if isinstance(n, dict):
                         n['edge_label'] = edge_label
                 return result
-            except (Exception, PluginError) as e:
-                raise e
-                # exc_type, exc_obj, exc_tb = sys.exc_info()
-                # fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                # raise OBPluginError(f"Unhandled plugin error! {exc_type}\nPlease see {fname} on line no. {exc_tb.tb_lineno}\n{e}")
-        return None
+        except (PluginError) as e:
+            raise e
 
     @staticmethod
     def _map_element(transform_map: dict, element: dict):
@@ -250,35 +225,15 @@ class Plugin(object, metaclass=Registry):
                 transform_map[label][k] = v
 
 
-# https://stackoverflow.com/a/7548190
-def load_plugin_str(
-    mod_name: str,
-    plugin_code: str,
-):
+def load_plugins_fs(plugins_path: str = "plugins/entities"):
     """
-    Load plugins from a string of code
+    Loads plugins from the filesystem ./{plugins_path}/*.py directory
 
-    :param module_name: The desired module name of the plugin.
-    :param plugin_code: The code of the plugin.
-    :return:
     """
-    # spec = importlib.util.spec_from_file_location('my_module', '/paht/to/my_module')
-    # module = importlib.util.module_from_spec(spec)
-    # spec.loader.exec_module(module)
-    new_mod = types.ModuleType(mod_name)
-    exec(plugin_code, new_mod.__dict__)
-    return Registry.plugins
-
-
-def load_plugins_fs(plugins_path: str = "plugins"):
-    """
-    Loads plugins from the filesystem ./plugins/*.py directory
-
-    :return: list of plugins sourced from the filesystem
-    """
-    entities = glob.glob(f'{plugins_path}/*.py')
+    entities = glob.glob(f'{plugins_path}/entities/*.py')
+    transforms = glob.glob(f'{plugins_path}/transforms/*.py')
     for entity in entities:
-        mod_name = entity.replace('.py', '').replace('plugins/', '')
+        mod_name = entity.replace('.py', '').replace('plugins/', '').replace('entities/', '')
         spec = importlib.util.spec_from_file_location(mod_name, f"{entity}")
         if spec is not None and spec.loader is not None:
             module = importlib.util.module_from_spec(spec)
@@ -287,24 +242,13 @@ def load_plugins_fs(plugins_path: str = "plugins"):
     return Registry.plugins
 
 
-def transform(label: str, icon: str = 'list', edge_label: str = 'transformed_to') -> Callable[[Callable], TransformFunction]:
+def transform(target: str, label: str, icon: str = 'list', edge_label: str = '') -> Callable[[Callable], TransformFunction]:
     """
     A decorator add transforms to an osintbuddy plugin.
 
-    Usage:
-    @transform(label=<label_text>, icon=<tabler_react_icon_name>)
-    def transform_to_ip(self, node, **kwargs):
-        # Method implementation
-
-    :param label: str, A string representing the label for the transform
-        method, which can be utilized for displaying in the context menu.
-    :param icon: str, Optional icon name, representing the icon associated
-        displayed by the transform label. Default is "list".
-    :return: A decorator for the plugin transform method.
     """
     def decorator_transform(func: Callable, edge_label: str = edge_label) -> TransformFunction:
         async def wrapper(self: Any, entity: Any, **kwargs: Any) -> Any:
-            print(entity, kwargs)
             return await func(self=self, entity=entity, **kwargs)
         
         # Use setattr to avoid type checker issues with dynamic attribute assignment

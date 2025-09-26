@@ -18,14 +18,13 @@ from osintbuddy import Registry, __version__, load_plugins_fs
 from osintbuddy.utils import to_snake_case
 
 APP_INFO = \
-"""___________________________________________________________________
+"""
+____________________________________________________________________
 | If you run into any bugs, please file an issue on Github:
 | https://github.com/osintbuddy/plugins
 |___________________________________________________________________
-|
 | OSINTBuddy plugins: v{osintbuddy_version}
 | PID: {pid}
-| Endpoint: 127.0.0.1:42562
 """.rstrip()
 
 DEFAULT_ENTITIES = [
@@ -194,18 +193,18 @@ def list_entities(plugins_path = None):
     printjson(plugins)
 
 
-def get_blueprints(label: str | None = None, plugins_path: str | None = None):
+async def get_blueprints(label: str | None = None, plugins_path: str | None = None):
     blueprints = {}
     prepare_run(plugins_path)
     if label is None:
-        plugins = [Registry.get_plug(to_snake_case(label))
+        plugins = [await Registry.get_plugin(to_snake_case(label))
                    for label in Registry.labels]
         for entity in plugins:
             blueprint = entity.blueprint()
             blueprints[to_snake_case(blueprint.get('label'))] = blueprint
         printjson(blueprints)
         return blueprints
-    plugin = Registry.get_plug(label)
+    plugin = await Registry.get_plugin(label)
     blueprint = plugin.blueprint() if plugin else []
     printjson(blueprint)
     return blueprint
@@ -246,7 +245,7 @@ def main():
     elif "ls transforms" in cmd_fn_key:
         asyncio.run(command(label=label, plugins_path=plugins_path))
     elif "blueprints" in cmd_fn_key:
-        command(plugins_path=plugins_path, label=label)
+        asyncio.run(command(plugins_path=plugins_path, label=label))
     else:
         command()
 

@@ -7,7 +7,6 @@ from osintbuddy.plugins import (
     Registry,
     Plugin,
     transform,
-    load_plugin_str,
     load_plugins_fs,
 )
 
