@@ -8,24 +8,24 @@ Basic Commands:
         `ob start` : Starts the FastAPI microservice (`ctrl+c` to stop the microservice)
         `ob init` : Load the initial osintbuddy entities onto your filesystem
 """
-import logging, asyncio, json
+import logging, asyncio, json, inspect
 from argparse import ArgumentParser
 import httpx
 from pyfiglet import figlet_format
 from termcolor import colored
 from pydantic import BaseModel
-from osintbuddy import Registry, __version__, Use, load_plugins
-from osintbuddy.utils import get_driver, to_snake_case
+from osintbuddy import Registry, __version__, load_plugins_fs
+from osintbuddy.plugins import Vertex
+from osintbuddy.utils import to_snake_case
 
 APP_INFO = \
-"""___________________________________________________________________
+"""
+____________________________________________________________________
 | If you run into any bugs, please file an issue on Github:
 | https://github.com/osintbuddy/plugins
 |___________________________________________________________________
-|
 | OSINTBuddy plugins: v{osintbuddy_version}
 | PID: {pid}
-| Endpoint: 127.0.0.1:42562 
 """.rstrip()
 
 DEFAULT_ENTITIES = [
@@ -60,7 +60,7 @@ log = get_logger()
 
 def _print_server_details():
     from os import getpid
-    print(colored(figlet_format(f"OSINTBuddy plugins", font='smslant'), color="blue"))
+    print(colored(figlet_format("OSINTBuddy plugins", font='smslant'), color="blue"))
     print(colored(APP_INFO.format(
         osintbuddy_version=__version__,
         pid=getpid(),
@@ -92,9 +92,7 @@ def load_git_entities():
     with httpx.Client() as client:
         for entity in DEFAULT_ENTITIES:
             log.info(f"loading osintbuddy entity: {entity}")
-            if Path(f"./plugins/{entity}").exists():
-                continue
-            else:
+            if not Path(f"./plugins/{entity}").exists():
                 data = client.get(f"https://raw.githubusercontent.com/osintbuddy/entities/refs/heads/main/{entity}")
                 with open(f"./plugins/{entity}", "w") as file:
                     file.write(data.text)
@@ -109,87 +107,170 @@ def init_entities():
     log.info("Initial entities loaded!")
 
 
-def printjson(value: str):
+def printjson(value):
     print(json.dumps(value))
 
-source = {"id":"1125899906842654","data":{"label":"Website","color":"#1D1DB8","icon":"world-www","elements":[{"value":"github.com","icon":"world-www","label":"Domain","type":"text"}]},"position":{"x":5275.072364647034,"y":3488.8488109543805},"transform":"To IP"}
 
-def prepare_run(plugins_path: str = None):
+def prepare_run(plugins_path: str | None = None):
     import os
-    if plugins_path == None:
+    if plugins_path is None:
         plugins_path = os.getcwd() + '/plugins'
     Registry.labels.clear()
     Registry.plugins.clear()
     Registry.ui_labels.clear()
-    return load_plugins(plugins_path)
+    if hasattr(Registry, "transforms_map"):
+        Registry.transforms_map.clear()
+    return load_plugins_fs(plugins_path)
 
 
-async def run_transform(plugins_path: str, source: str):
-    '''
-    E.g.
-    ob run -t '{serde_json::Value<entity-sent-by-ws-user>}'
-    '''
-    source = json.loads(source)
-    transform_type = source.get("transform")
 
+async def run_transform(plugins_path: str, source: str, settings = None, cfg: str | None = None):
+    src = json.loads(source)
     prepare_run(plugins_path)
-    plugin = await Registry.get_plugin(source.get("data").get("label"))
-    if not plugin is None:
-        transform_result = await plugin().run_transform(
-            transform_type=transform_type,
-            entity=source,
-            use=Use(get_driver=get_driver, settings={})
-        )
-        printjson(transform_result)
-    else:
-        print([])
+    entity_payload = src.pop("entity")
+    transform_label = entity_payload.pop("transform")
+    source_entity_label = entity_payload.get("data", {}).get("label")
+    if not source_entity_label:
+        printjson({"error": "missing entity label"})
+        return
+
+    snake_label = to_snake_case(source_entity_label)
+    plugin_cls = await Registry.get_entity(snake_label)
+    if plugin_cls is None:
+        printjson({"error": "plugin_not_found", "label": snake_label})
+        return
+
+    # find transforms for plugin.entity_id & plugin.version
+    entity_id = getattr(plugin_cls, "entity_id", None) or to_snake_case(plugin_cls.label)
+    entity_version = getattr(plugin_cls, "version", "0")
+    mapping = Registry.find_transforms(entity_id, entity_version)
+
+    tkey = to_snake_case(transform_label)
+    transform_fn = mapping.get(tkey)
+    if transform_fn is None:
+        printjson({"error": "transform_not_found", "transform": transform_label})
+        return
+
+    # prepare entity argument expected by transforms (Vertex if available)
+    entity_dict = entity_payload
+    entity_data = entity_dict.get("data", {})
+    entity_arg = Vertex(**{
+        **{to_snake_case(k): v for k, v in entity_data.items()},
+        "id": entity_dict.get("id"),
+        "label": entity_data.get("label")
+    })
 
 
-async def list_transforms(label: str, plugins_path: str = None):
+    # parse cfg if provided (cli sends string)
+    cfg_obj = None
+    if cfg:
+        try:
+            cfg_obj = json.loads(cfg)
+        except Exception:
+            cfg_obj = cfg
+
+    # call the transform. decorator wrapper expects (self=None, entity=..., **kwargs)
+    plugin_instance = plugin_cls()
+    sig = inspect.signature(transform_fn)
+    kwargs = {}
+    if "cfg" in sig.parameters:
+        kwargs["cfg"] = cfg_obj
+
+    try:
+        result = await transform_fn(self=plugin_instance, entity=entity_arg, **kwargs)
+    except TypeError:
+        # older wrapper signatures might be (entity, **kwargs)
+        result = await transform_fn(entity=entity_arg, **kwargs)
+
+    # normalize to list/dict exactly like Plugin.run did earlier: ensure edge_label present
+    if isinstance(result, dict):
+        result.setdefault("edge_label", getattr(transform_fn, "edge_label", tkey))
+        result = [result]
+    elif isinstance(result, list):
+        for r in result:
+            if isinstance(r, dict):
+                r.setdefault("edge_label", getattr(transform_fn, "edge_label", tkey))
+    printjson(result)
+
+
+async def list_transforms(label: str, plugins_path: str | None = None):
     prepare_run(plugins_path)
-    plugin = await Registry.get_plugin(label)
-    if plugin is None:
+    if label is None:
+        printjson([])
         return []
-    transforms = plugin().transform_labels
+
+    # registry keys are snake_case
+    snake = to_snake_case(label)
+    plugin_cls = await Registry.get_entity(snake)
+    if plugin_cls is None:
+        printjson([])
+        return []
+
+    # derive entity_id and version from plugin class
+    entity_id = getattr(plugin_cls, "entity_id", None) or to_snake_case(plugin_cls.label)
+    entity_version = getattr(plugin_cls, "version", "0")
+
+    mapping = Registry.find_transforms(entity_id, entity_version)  # dict[label -> fn]
+    transforms = [
+        {
+            "label": lbl,
+            "icon": getattr(fn, "icon", "list"),
+            "edge_label": getattr(fn, "edge_label", lbl)
+        }
+        for lbl, fn in mapping.items()
+    ]
     printjson(transforms)
     return transforms
 
 
-def list_plugins(plugins_path: str = None):
+
+def list_plugins(plugins_path = None):
     plugins = prepare_run(plugins_path)
     loaded_plugins = [to_snake_case(p.label) for p in plugins]
     printjson(loaded_plugins)
 
 
 class EntityCreate(BaseModel):
-    label: str = None
+    label: str | None = None
     author: str = "Unknown author"
     description: str = "No description found..."
     last_edit: str
     source: str | None
 
-def list_entities(plugins_path: str = None):
+
+def list_entities(plugins_path = None):
+    # dev mode plugins...
     import os, sys
     from datetime import datetime
     prepare_run(plugins_path)
-    printjson([dict(
-        label=plugin.label,
-        author=plugin.author,
-        description=plugin.description,
-        last_edit=datetime.utcfromtimestamp(os.path.getmtime(sys.modules[plugin.__module__].__file__ )).strftime('%Y-%m-%d %H:%M:%S'),
-    ) for plugin in Registry.plugins])
+    plugins = []
+    for plugin in Registry.plugins.values():
+        path = f"{sys.modules[plugin.__module__].__file__}"
+        source = open(path, "r").read()
+        last_file_edit = datetime.utcfromtimestamp(os.path.getmtime(path)).strftime('%Y-%m-%d %H:%M:%S')
+        plugins.append(dict(
+            label=plugin.label,
+            author=plugin.author,
+            description=plugin.description,
+            source=source,
+            last_edit=last_file_edit,
+        ))
+    printjson(plugins)
 
 
-def get_blueprints(label: str = None, plugins_path: str = None):
+async def get_blueprints(label: str | None = None, plugins_path: str | None = None):
+    blueprints = {}
     prepare_run(plugins_path)
     if label is None:
-        plugins = [Registry.get_plug(to_snake_case(label)) 
+        plugins = [await Registry.get_entity(to_snake_case(label))
                    for label in Registry.labels]
-        blueprints = [p.create() for p in plugins]
+        for entity in plugins:
+            blueprint = entity.blueprint()
+            blueprints[to_snake_case(blueprint.get('label'))] = blueprint
         printjson(blueprints)
         return blueprints
-    plugin = Registry.get_plug(label)
-    blueprint = plugin.create() if plugin else []
+    plugin = await Registry.get_entity(label)
+    blueprint = plugin.blueprint() if plugin else []
     printjson(blueprint)
     return blueprint
 
@@ -199,7 +280,7 @@ commands = {
     # "plugin create": create_plugin_wizard,
     "init": init_entities,
     "run": run_transform,
-    "ls": list_transforms,
+    "ls transforms": list_transforms,
     "ls plugins": list_plugins,
     "ls entities": list_entities,
     "blueprints": get_blueprints
@@ -208,30 +289,30 @@ commands = {
 def main():
     parser = ArgumentParser()
     parser.add_argument('command', type=str, nargs="*", help="[CATEGORY (Optional)] [ACTION]")
-    parser.add_argument('-t', '--transform', type=str, nargs="*", help="[CATEGORY (Optional)] [ACTION]")
-    parser.add_argument('-p', '--plugins', type=str, nargs="*", help="[CATEGORY (Optional)] [ACTION]")
-    parser.add_argument('-l', '--label', type=str, nargs="*", help="[CATEGORY (Optional)] [ACTION]")
-    
+    parser.add_argument('-T', '--transform', type=str, nargs="*", help="[CATEGORY (Optional)] [ACTION]")
+    parser.add_argument('-P', '--plugins', type=str, nargs="*", help="[CATEGORY (Optional)] [ACTION]")
+    parser.add_argument('-L', '--label', type=str, nargs="*", help="[CATEGORY (Optional)] [ACTION]")
+
     args = parser.parse_args()
     cmd_fn_key = ' '.join(args.command)
     command = commands.get(cmd_fn_key)
-    if command:
-        if "run" in cmd_fn_key:
-            asyncio.run(command(plugins_path=args.plugins if args.plugins is None else args.plugins[0], source=args.transform[0]))
-        elif "ls plugins" in cmd_fn_key:
-             command(plugins_path=args.plugins if args.plugins is None else args.plugins[0])
-        elif "ls entities" in cmd_fn_key:
-            command(plugins_path=args.plugins if args.plugins is None else args.plugins[0])
-        elif "ls" in cmd_fn_key:
-            asyncio.run(command(label=args.label if args.label is None else args.label[0], plugins_path=args.plugins if args.plugins is None else args.plugins[0]))
-        elif "blueprints" in cmd_fn_key:
-            command(plugins_path=args.plugins if args.plugins is None else args.plugins[0], label=args.label if args.label is None else args.label[0])
-        else:
-            command()
+    if command is None:
+        parser.error("Command not recognized!")
 
+    plugins_path = args.plugins[0] if args.plugins else None
+    label = args.label if args.label is None else args.label[0]
+    if "run" in cmd_fn_key:
+        asyncio.run(command(plugins_path=plugins_path, source=args.transform[0]))
+    elif "ls plugins" in cmd_fn_key:
+            command(plugins_path=plugins_path)
+    elif "ls entities" in cmd_fn_key:
+        command(plugins_path=plugins_path)
+    elif "ls transforms" in cmd_fn_key:
+        asyncio.run(command(label=label, plugins_path=plugins_path))
+    elif "blueprints" in cmd_fn_key:
+        asyncio.run(command(plugins_path=plugins_path, label=label))
     else:
-        parser.error("Command not recognized")
-
+        command()
 
 if __name__ == '__main__':
     main()

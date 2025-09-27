@@ -1,17 +1,31 @@
-import os, importlib, inspect, sys, glob
+import os, importlib, inspect, sys, glob, json, types
 import importlib.util
-from typing import List, Any, Callable, Optional, Dict
+from typing import Any, TypedDict, ClassVar, NewType, TypeAlias, Type, Protocol, Callable
+from packaging.version import Version, InvalidVersion
+from packaging.specifiers import SpecifierSet, InvalidSpecifier
+
 from collections import defaultdict
+from collections.abc import Callable, Awaitable
 from pydantic import BaseModel, ConfigDict
+
 from osintbuddy.elements.base import BaseElement
-from osintbuddy.errors import OBPluginError
+from osintbuddy.errors import PluginError
 from osintbuddy.utils import to_snake_case
 
+E = NewType('E', BaseElement)
 
-OBNodeConfig = ConfigDict(extra="allow", frozen=False, populate_by_name=True, arbitrary_types_allowed=True)
+class Vertex(BaseModel):
+    model_config = ConfigDict(extra="allow", frozen=False, populate_by_name=True, arbitrary_types_allowed=True)
 
-class OBNode(BaseModel):
-    model_config = OBNodeConfig
+
+class TransformFunction(Protocol):
+    label: str
+    icon: str
+    edge_label: str
+    entity_transform: Awaitable[Any]
+    entity_version: Version
+    
+    def __call__(self, entity: Vertex, **kwargs: Any) -> Awaitable[Any]: ...
 
 
 def plugin_results_middleman(f):
@@ -28,159 +42,190 @@ def plugin_results_middleman(f):
     return decorator
 
 
-class OBUse(BaseModel):
-    get_driver: Callable[[], None]
-    settings: dict
+class UILabel(TypedDict):
+    label: str
+    description: str
+    author: str
 
 
-class OBRegistry(type):
-    plugins = []
-    labels = []
-    ui_labels = []
+class Registry(type):
+    """
+    Metaclass & central registry.
+
+    - Registry.plugins: plugin class map (entity_id -> Plugin subclass)
+    - Registry.transforms_map: entity_id -> list of (SpecifierSet, { transform_label -> fn })
+      We keep multiple buckets (different specifier sets) for a single entity_id.
+    """
+    plugins: ClassVar[dict[str, type['Plugin']]] = {}
+    labels: ClassVar[list[str]] = []
+    ui_labels: ClassVar[list[UILabel]] = []
+    transforms_map: ClassVar[dict[str, list[tuple[SpecifierSet, dict[str, TransformFunction]]]]] = defaultdict(list)
 
     def __init__(cls, name, bases, attrs):
-        """
-        Initializes the OBRegistry metaclass by adding the plugin class
-        and its label if it is a valid plugin.
-        """
-        if name != 'OBPlugin' and name != 'Plugin' and issubclass(cls, OBPlugin):
+        # Register Plugin subclasses (unchanged behavior)
+        if name != 'Plugin' and issubclass(cls, Plugin):
             label = cls.label.strip()
-        
-            if cls.is_available is True:
+            if cls.show_option and label:
                 if isinstance(cls.author, list):
                     cls.author = ', '.join(cls.author)
-                OBRegistry.ui_labels.append({
+                Registry.ui_labels.append({
                     'label': label,
-                    'description': cls.description if cls.description != None else "Description not available.",
-                    'author': cls.author if cls.author != None else "Author not provided.",
+                    'description': cls.description if cls.description is not None else "Description not available.",
+                    'author': cls.author if cls.author is not None else "Author not provided.",
                 })
-            OBRegistry.labels.append(label)
-            OBRegistry.plugins.append(cls)
-    
-    @classmethod
-    async def get_plugin(cls, plugin_label: str):
-        """
-        Returns the corresponding plugin class for a given plugin_label or
-        'None' if not found.
-
-        :param plugin_label: The label of the plugin to be returned.
-        :return: The plugin class or None if not found.
-        """
-        for idx, label in enumerate(cls.labels):
-            if label == plugin_label or to_snake_case(label) == to_snake_case(plugin_label):
-                return cls.plugins[idx]
-        return None
+            Registry.labels.append(label)
+            Registry.plugins[to_snake_case(label)] = cls
 
     @classmethod
-    def get_plug(cls, plugin_label: str):
+    async def get_entity(cls, plugin_label: str) -> Any:
         """
-        Returns the corresponding plugin class for a given plugin_label or
-        'None' if not found.
-
-        :param plugin_label: The label of the plugin to be returned.
-        :return: The plugin class or None if not found.
+        Accepts:
+          - 'cse_result'
+          - 'CSE Result'
+          - 'cse_result@1.0.0'
+          - 'CSE Result@>=1.0'
+        and normalizes to the registry key (snake_case label).
         """
-        for idx, label in enumerate(cls.labels):
-            if to_snake_case(label) == to_snake_case(plugin_label):
-                return cls.plugins[idx]
-        return None
-   
-    def __getitem__(self, i: str):
-        return self.get_plug[i]
+        if not plugin_label:
+            raise PluginError("Empty plugin_label passed to Registry.get_entity")
 
-# https://stackoverflow.com/a/7548190
-def load_plugin(
-    mod_name: str,
-    plugin_code: str,
-):
-    """
-    Load plugins from a string of code
+        # If caller passed "<label>@<version_spec>", strip the @version part.
+        if "@" in plugin_label:
+            plugin_label = plugin_label.split("@", 1)[0]
 
-    :param module_name: The desired module name of the plugin.
-    :param plugin_code: The code of the plugin.
-    :return:
-    """
-    # spec = importlib.util.spec_from_file_location('my_module', '/paht/to/my_module')
-    # module = importlib.util.module_from_spec(spec)
-    # spec.loader.exec_module(module)
-    new_mod = importlib.create_module(mod_name)
-    exec(plugin_code, new_mod.__dict__)
-    return OBRegistry.plugins
+        # Normalize to snake_case since Registry.plugins keys use to_snake_case(plugin.label)
+        key = to_snake_case(plugin_label)
+        plugin = cls.plugins.get(key)
+        if plugin:
+            return plugin
+        raise PluginError(f"{plugin_label} plugin not found! Make sure it's loaded...")
 
+    # -------------------------
+    # Transform registration API
+    # -------------------------
+    @classmethod
+    def register_transform(cls, entity_id: str, version_spec: str, transform_label: str, fn: TransformFunction) -> None:
+        """
+        Register a transform for an entity_id under a version specifier.
+        Strict collision policy:
+          - If an existing bucket has an overlapping SpecifierSet and already defines transform_label -> raise PluginError.
+        """
+        # normalize inputs
+        if not entity_id or not transform_label:
+            raise PluginError("register_transform requires entity_id and transform_label")
 
-def load_plugins(plugins_path: str = "plugins"):
-    """
-    Loads plugins from the filesystem ./plugins/*.py directory
+        try:
+            spec = SpecifierSet(version_spec)
+        except InvalidSpecifier:
+            # allow a single-version like "1.2.3" as equivalent to "==1.2.3"
+            try:
+                Version(version_spec)
+                spec = SpecifierSet(f"=={version_spec}")
+            except InvalidVersion:
+                raise PluginError(f"Invalid version specifier '{version_spec}' for transform {transform_label}")
 
-    :return: list of plugins sourced from the filesystem
-    """
-    entities = glob.glob(f'{plugins_path}/*.py')
-    for entity in entities:
-        mod_name = entity.replace('.py', '').replace('plugins/', '')
-        spec = importlib.util.spec_from_file_location(mod_name, f"{entity}")
-        module = importlib.util.module_from_spec(spec)
-        sys.modules[mod_name] = module
-        spec.loader.exec_module(module)
-    return OBRegistry.plugins
+        # collision detection: if any existing SpecifierSet intersects this one and already contains the label -> error
+        for existing_spec, mapping in cls.transforms_map.get(entity_id, []):
+            # intersection test: check if there exists any candidate version (heuristic)
+            # We'll test by checking if there exists a version that satisfies both sets by testing candidate points:
+            # - test boundaries present in spec strings (simple heuristic), else conservative: assume overlap and check label
+            # Simpler and deterministic: if mapping already has label and spec intersection is non-empty by sampling
+            if transform_label in mapping:
+                # rough overlap check: test a few candidate versions from existing_spec & spec
+                # We'll attempt to find any version string that satisfies both: test a set of candidates derived from specs
+                # For strictness, if we cannot safely prove disjointness, treat as overlap.
+                # Practical: if either spec contains '==' the check is straightforward.
+                try:
+                    # if either is an exact spec (==x), check direct membership
+                    existing_exact = next((s for s in str(existing_spec).split(',') if s.strip().startswith('==')), None)
+                    new_exact = next((s for s in str(spec).split(',') if s.strip().startswith('==')), None)
+                    if existing_exact and new_exact:
+                        # both exact -> check equality
+                        if existing_exact == new_exact:
+                            raise PluginError(f"Transform collision: '{transform_label}' already registered for {entity_id} spec {existing_spec}")
+                    else:
+                        # Conservative: assume overlap (strict policy). If label exists in mapping, error.
+                        raise PluginError(f"Transform collision: '{transform_label}' already registered for {entity_id} with overlapping version spec '{existing_spec}'")
+                except PluginError:
+                    raise
+        # no collisions — either bucket exists without the label or there were no intersecting label entries
+        # try to merge with an existing identical spec bucket
+        for i, (existing_spec, mapping) in enumerate(cls.transforms_map.get(entity_id, [])):
+            if str(existing_spec) == str(spec):
+                if transform_label in mapping:
+                    # duplicate exact registration
+                    raise PluginError(f"Transform '{transform_label}' already registered for {entity_id}@{version_spec}")
+                mapping[transform_label] = fn
+                return
 
+        # otherwise append new bucket
+        cls.transforms_map[entity_id].append((spec, {transform_label: fn}))
 
-def transform(label, icon='list', edge_label='transformed_to'):
-    """
-    A decorator add transforms to an osintbuddy plugin.
+    @classmethod
+    def find_transforms(cls, entity_id: str, entity_version: str) -> dict[str, TransformFunction]:
+        """
+        Return a mapping of transform_label -> fn for transforms whose specifier matches entity_version.
+        Merge strategy: later registrations override earlier registrations for same label (but we prevented overlapping collisions).
+        """
+        if entity_id not in cls.transforms_map:
+            return {}
+        try:
+            ver = Version(entity_version)
+        except InvalidVersion:
+            # if version isn't parseable, treat as not found
+            return {}
 
-    Usage:
-    @transform(label=<label_text>, icon=<tabler_react_icon_name>)
-    def transform_to_ip(self, node, **kwargs):
-        # Method implementation
+        result: dict[str, TransformFunction] = {}
+        for specset, mapping in cls.transforms_map.get(entity_id, []):
+            if ver in specset:
+                result.update(mapping)
+        return result
 
-    :param label: str, A string representing the label for the transform
-        method, which can be utilized for displaying in the context menu.
-    :param icon: str, Optional icon name, representing the icon associated
-        displayed by the transform label. Default is "list".
-    :return: A decorator for the plugin transform method.
-    """
-    def decorator_transform(func, edge_label=edge_label):
-        async def wrapper(self, node, **kwargs):
-            return await func(self=self, node=node, **kwargs)
-        wrapper.label = label
-        wrapper.icon = icon
-        wrapper.edge_label = edge_label
-        return wrapper
-    return decorator_transform
+ElementsLayout: TypeAlias = list[BaseElement | list[BaseElement]]
 
-
-class OBPlugin(object, metaclass=OBRegistry):
+class Plugin(object, metaclass=Registry):
     """
     OBPlugin is the base class for all plugin classes in this application.
     It provides the required structure and methods for a plugin.
     """
-    entity: List[BaseElement]
-    color: str = '#145070'
-    label: str = ''
-    icon: str = 'atom-2'
-    is_available = True
+    version: str
+    # If None, the entity_id is the label as snakecase
+    entity_id: str | None = None
 
-    author = ''
-    description = ''
+    label: str = ''
+    description: str = ''
+    author: str = 'Unknown'
+
+    icon: str = 'atom-2'
+    color: str = '#145070'
+    show_option = True
+
+    elements: ElementsLayout = list()
 
     def __init__(self):
         transforms = self.__class__.__dict__.values()
-        self.transforms = {
-            to_snake_case(func.label): func for func in transforms if hasattr(func, 'label')
-        }
-        self.transform_labels = [
-            {
-                'label': func.label,
-                'icon': func.icon if hasattr(func, 'icon') else 'atom-2',
-            } for func in transforms
-            if hasattr(func, 'label')
-        ]
-    
+        self.transforms: dict[str, TransformFunction] = {}
+        self.transform_labels: list[dict[str, str]] = []
+
+        for func in transforms:
+            if hasattr(func, 'label'):
+                key = to_snake_case(func.label)   # internal lookup key
+                self.transforms[key] = func
+
+                raw_edge = getattr(func, 'edge_label', None)
+                edge_label = raw_edge if raw_edge and raw_edge.strip() else func.label
+
+                self.transform_labels.append({
+                    'label': func.label,                 # human-readable
+                    'icon': getattr(func, 'icon', 'atom-2'),
+                    'edge_label': edge_label,            # always non-empty
+                })
+
     def __call__(self):
         return self.create()
 
     @staticmethod
-    def _map_entity_labels(element, **kwargs):
+    def __map_element_labels(element: dict, **kwargs):
         label = to_snake_case(element['label'])
         for element_key in kwargs.keys():
             if element_key == label:
@@ -192,66 +237,83 @@ class OBPlugin(object, metaclass=OBRegistry):
         return element
 
     @classmethod
+    def blueprint(cls, **kwargs):
+        """
+  
+        """
+        metaentity = defaultdict(None)
+        metaentity['label'] = cls.label
+        metaentity['color'] = cls.color
+        metaentity['icon'] = cls.icon
+        metaentity['elements'] = []
+        for element in cls.elements:
+            if isinstance(element, list):
+                metaentity['elements'].append([
+                    cls.__map_element_labels(elm.to_dict(), **kwargs)
+                    for elm in element
+                ])
+            else:
+                element_row = cls.__map_element_labels(element.to_dict(), **kwargs)
+                metaentity['elements'].append(element_row)
+        return metaentity
+
+    @classmethod
     def create(cls, **kwargs):
         """
-        Generate and return a dictionary representing the plugins ui entity.
-        Includes label, name, color, icon, and a list of all elements
-        for the entity/plugin.
+       
         """
-        ui_entity = defaultdict(None)
-        ui_entity['data'] = {
-            'label': cls.label,
-            'color': cls.color if cls.color else '#145070',
-            'icon': cls.icon,
-            'elements': []
-        }
-        if cls.entity:
-            for element in cls.entity:
-                # if an entity element is a nested list, 
-                # elements will be positioned next to each other horizontally
-                if isinstance(element, list):
-                    ui_entity['data']['elements'].append([
-                        cls._map_entity_labels(elm.to_dict(), **kwargs)
-                        for elm in element
-                    ])
-                # otherwise position the entity elements vertically on the actual UI entity
-                else:
-                    element_row = cls._map_entity_labels(element.to_dict(), **kwargs)
-                    ui_entity['data']['elements'].append(element_row)
-            return ui_entity
+        kwargs['label'] = cls.label
+        return kwargs
 
-
-    async def run_transform(self, transform_type: str, entity, use: OBUse) -> Any:
-        """ Return output from a function accepting node data.
-            The function will be called with a single argument, the node data
-            from when a node context menu action is taken - and should return
-            a list of Nodes.
-            None if the plugin doesn't provide a transform
-            for the transform_type.
+    async def run(self, transform_type: str, entity, cfg: dict | None = None) -> Any:
+        """ 
         """
         transform_type = to_snake_case(transform_type)
-        if self.transforms and self.transforms[transform_type]:
-            try:
-                transform = await self.transforms[transform_type](
-                    self=self,
-                    node=self._map_to_transform_data(entity),
-                    use=use
-                )
-                edge_label = self.transforms[transform_type].edge_label
-                if not isinstance(transform, list):
-                    transform['edge_label'] = edge_label
-                    return [transform]
-                [
-                    n.__setitem__('edge_label', edge_label)
-                    for n in transform
-                ]
-                return transform
-            except (Exception, OBPluginError) as e:
-                raise e
-                # exc_type, exc_obj, exc_tb = sys.exc_info()
-                # fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                # raise OBPluginError(f"Unhandled plugin error! {exc_type}\nPlease see {fname} on line no. {exc_tb.tb_lineno}\n{e}")
-        return None
+        if isinstance(entity, str):
+            entity = json.loads(entity)
+        entity_id = entity.pop('id')
+        data = entity.pop("data")
+        entity_label = data.pop("label")
+        entity = {
+            to_snake_case(k): v for k, v in data.items()
+        }
+        entity["id"] = entity_id
+        entity["label"] = entity_label
+
+        # resolve available transforms for this entity_id/version
+        entity_key = self.entity_id or to_snake_case(self.label)
+        transforms_for_version = Registry.find_transforms(entity_key, getattr(self, 'version', '0'))
+        if transform_type not in transforms_for_version:
+            raise PluginError(f"Transform '{transform_type}' not found for {entity_key}@{getattr(self, 'version', '0')}")
+
+        try:   
+            if self.transforms and self.transforms[transform_type]:
+
+                transform_fn = transforms_for_version[transform_type]
+                sig = inspect.signature(transform_fn)
+                if 'cfg' in sig.parameters:
+                    result = await transform_fn(
+                        entity=Vertex(**entity),
+                        cfg=cfg
+                    )
+                else:
+                    result = await transform_fn(
+                        entity=Vertex(**entity),
+                    )
+                # Pull the declared edge label from the transform function metadata
+                edge_label = getattr(transform_fn, 'edge_label', transform_type)
+
+                # Normalize result to a list of dicts and inject edge_label as a string
+                if not isinstance(result, list):
+                    if isinstance(result, dict):
+                        result['edge_label'] = edge_label
+                    return [result]
+                for n in result:
+                    if isinstance(n, dict):
+                        n['edge_label'] = edge_label
+                return result
+        except (PluginError) as e:
+            raise e
 
     @staticmethod
     def _map_element(transform_map: dict, element: dict):
@@ -268,14 +330,64 @@ class OBPlugin(object, metaclass=OBRegistry):
             else:
                 transform_map[label][k] = v
 
-    @classmethod
-    def _map_to_transform_data(cls, node: dict) -> OBNode:
-        transform_map: dict = {}
-        data: dict = node.get('data', {})
-        elements: list[dict] = data.get('elements', [])
-        for element in elements:
-            if isinstance(element, list):
-                [cls._map_element(transform_map, elm) for elm in element]
-            else:
-                cls._map_element(transform_map, element)
-        return OBNode(**transform_map)
+
+def load_plugins_fs(plugins_path: str = "plugins", package="osintbuddy.transforms") -> dict[str, type[Plugin]]:
+    """
+    Loads plugins from the filesystem ./{plugins_path}/*.py directory
+
+    """
+    entity_files = glob.glob(f'{plugins_path}/entities/*.py')
+    transform_scripts = glob.glob(f'{plugins_path}/transforms/*.py')
+    # print("TRANSFORM FILES: ", transform_scripts)
+    for entity_path in entity_files:
+        mod_name = entity_path.replace('.py', '').replace('plugins/', '').replace('entities/', '')
+        spec = importlib.util.spec_from_file_location(mod_name, f"{entity_path}")
+        if spec is not None and spec.loader is not None:
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[mod_name] = module
+            spec.loader.exec_module(module)
+    for script in transform_scripts:
+        base = os.path.splitext(os.path.basename(script))[0]
+        script_mod_name = f"plugins.transforms.{base}"
+        spec = importlib.util.spec_from_file_location(script_mod_name, script)
+        if spec is not None and spec.loader is not None:
+            module = importlib.util.module_from_spec(spec)
+            module.__package__ = "plugins.transforms"
+            sys.modules[script_mod_name] = module
+            spec.loader.exec_module(module)
+
+            # Register transforms found in the module
+            for name in dir(module):
+                obj = getattr(module, name)
+                if callable(obj) and hasattr(obj, 'entity_transform') and hasattr(obj, 'entity_version'):
+                    # transform label stored as attribute by decorator
+                    tlabel = to_snake_case(getattr(obj, 'label'))
+                    entity_id = getattr(obj, 'entity_transform')
+                    version_spec = getattr(obj, 'entity_version')
+                    Registry.register_transform(entity_id, version_spec, tlabel, obj)
+    return Registry.plugins
+
+def transform(target: str, label: str, icon: str = 'list', edge_label: str = '') -> Callable[[Callable], TransformFunction]:
+    """
+    A decorator add transforms for osintbuddy entities.
+
+    """
+
+    target_entity = target.split("@")
+    if len(target_entity) != 2:
+        raise Exception("Transform `target` must be `entity_id@version_spec`! e.g. `cse_result@1.0.0`")
+    entity_transform = target_entity[0]
+    entity_version = target_entity[1] # allow things like ">=1.0,<2.0" or "==1.0.0"
+
+    def decorator_transform(func: Callable) -> TransformFunction:
+        async def wrapper(entity: Any, **kwargs: Any) -> Any:
+            return await func(entity=entity, **kwargs)
+        
+        # Use setattr to avoid type checker issues with dynamic attribute assignment
+        setattr(wrapper, 'label', label)
+        setattr(wrapper, 'icon', icon)
+        setattr(wrapper, 'edge_label', edge_label)
+        setattr(wrapper, 'entity_transform', entity_transform)
+        setattr(wrapper, 'entity_version', entity_version)
+        return wrapper  # type: ignore[return-value]
+    return decorator_transform

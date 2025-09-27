@@ -10,8 +10,7 @@ pip install -e .
 ob start
 ```
 
-The osintbuddy plugin system at its core is very simple. A `Registry` class holds all registered `Plugin` classes within the application. This registry is loaded into the osintbuddy plugins service (*this repo*) where it is then used by the [osintbuddy application](https://github.com/osintbuddy/osintbuddy/) to load the available entities for the user when they access a project graph, load transforms when a user opens the context menu of a node, and perform transformations which expect a `Plugin.create()` to be returned. The returned data of a transform decorated method will be automatically mapped to a [PostgreSQL](https://www.postgresql.org) database with [apache/age](https://age.apache.org/) according to the labels *(as snakecase)* you previously set in the classes `node` for whatever `Plugin.create()`
-you return.
+The osintbuddy plugin system at its core is very simple. A `Registry` class holds all registered `Plugin` classes within the application. This registry is loaded into the osintbuddy plugins service (*this repo*) where it is then used by the [osintbuddy application](https://github.com/osintbuddy/osintbuddy/) to load the available entities for the user when they access a project graph, load transforms when a user opens the context menu of a node, and perform transformations which expect a `Plugin.create()` to be returned. The returned data of a transform decorated method will be automatically mapped to a [PostgreSQL](https://www.postgresql.org) database according to the labels *(as snakecase)* you previously set in the classes `entity` for whatever `Plugin.create()` you return.
 
 
 To make this a bit more clear please see the below example...
