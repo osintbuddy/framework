@@ -130,7 +130,7 @@ ob run -T '{"action":"transform:entity","entity":{"id":"4c755e2b-45d4-48e8-b8c2-
     entity = src.pop("entity")
     transform_label = entity.pop("transform")
     source_entity_label = entity.get("data").get("label")
-    plugin = await Registry.get_plugin(source_entity_label)
+    plugin = await Registry.get_entity(source_entity_label)
     if plugin is None:
         # TODO: Create error handling type {"error": "api", "message": "blah blah"}
         print([])
@@ -151,7 +151,7 @@ ob run -T '{"action":"transform:entity","entity":{"id":"4c755e2b-45d4-48e8-b8c2-
 
 async def list_transforms(label: str, plugins_path: str | None = None):
     prepare_run(plugins_path)
-    plugin = await Registry.get_plugin(label)
+    plugin = await Registry.get_entity(label)
     if plugin is None:
         return []
     transforms = plugin().transform_labels
@@ -197,14 +197,14 @@ async def get_blueprints(label: str | None = None, plugins_path: str | None = No
     blueprints = {}
     prepare_run(plugins_path)
     if label is None:
-        plugins = [await Registry.get_plugin(to_snake_case(label))
+        plugins = [await Registry.get_entity(to_snake_case(label))
                    for label in Registry.labels]
         for entity in plugins:
             blueprint = entity.blueprint()
             blueprints[to_snake_case(blueprint.get('label'))] = blueprint
         printjson(blueprints)
         return blueprints
-    plugin = await Registry.get_plugin(label)
+    plugin = await Registry.get_entity(label)
     blueprint = plugin.blueprint() if plugin else []
     printjson(blueprint)
     return blueprint

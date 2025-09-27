@@ -68,7 +68,7 @@ class Registry(type):
             Registry.plugins[to_snake_case(label)] = cls
 
     @classmethod
-    async def get_plugin(cls, plugin_label: str) -> Any:
+    async def get_entity(cls, plugin_label: str) -> Any:
         """
         Returns the corresponding plugin class for a given plugin_label or
         'None' if not found.
