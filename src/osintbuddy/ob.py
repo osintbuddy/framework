@@ -8,13 +8,14 @@ Basic Commands:
         `ob start` : Starts the FastAPI microservice (`ctrl+c` to stop the microservice)
         `ob init` : Load the initial osintbuddy entities onto your filesystem
 """
-import logging, asyncio, json
+import logging, asyncio, json, inspect
 from argparse import ArgumentParser
 import httpx
 from pyfiglet import figlet_format
 from termcolor import colored
 from pydantic import BaseModel
 from osintbuddy import Registry, __version__, load_plugins_fs
+from osintbuddy.plugins import Vertex
 from osintbuddy.utils import to_snake_case
 
 APP_INFO = \
@@ -117,46 +118,110 @@ def prepare_run(plugins_path: str | None = None):
     Registry.labels.clear()
     Registry.plugins.clear()
     Registry.ui_labels.clear()
+    if hasattr(Registry, "transforms_map"):
+        Registry.transforms_map.clear()
     return load_plugins_fs(plugins_path)
 
 
+
 async def run_transform(plugins_path: str, source: str, settings = None, cfg: str | None = None):
-    '''
-    E.g.
-ob run -T '{"action":"transform:entity","entity":{"id":"4c755e2b-45d4-48e8-b8c2-c8ed546334ad","type":"telegram_websearch","data":{"label":"telegram_websearch","query":"jerlendds"},"position":{"x":-947.1913273648004,"y":-183.30472176357043},"transform":"To CSE Search"}}'
-    '''
     src = json.loads(source)
     prepare_run(plugins_path)
-    entity = src.pop("entity")
-    transform_label = entity.pop("transform")
-    source_entity_label = entity.get("data").get("label")
-    plugin = await Registry.get_entity(source_entity_label)
-    if plugin is None:
-        # TODO: Create error handling type {"error": "api", "message": "blah blah"}
-        print([])
-    else:
-        if cfg:
-            transform_result = await plugin().run_transform(
-                transform_type=transform_label,
-                entity=entity,
-                cfg=cfg
-            )
-        else:
-            transform_result = await plugin().run_transform(
-                transform_type=transform_label,
-                entity=entity,
-            )
-        printjson(transform_result)
+    entity_payload = src.pop("entity")
+    transform_label = entity_payload.pop("transform")
+    source_entity_label = entity_payload.get("data", {}).get("label")
+    if not source_entity_label:
+        printjson({"error": "missing entity label"})
+        return
+
+    snake_label = to_snake_case(source_entity_label)
+    plugin_cls = await Registry.get_entity(snake_label)
+    if plugin_cls is None:
+        printjson({"error": "plugin_not_found", "label": snake_label})
+        return
+
+    # find transforms for plugin.entity_id & plugin.version
+    entity_id = getattr(plugin_cls, "entity_id", None) or to_snake_case(plugin_cls.label)
+    entity_version = getattr(plugin_cls, "version", "0")
+    mapping = Registry.find_transforms(entity_id, entity_version)
+
+    tkey = to_snake_case(transform_label)
+    transform_fn = mapping.get(tkey)
+    if transform_fn is None:
+        printjson({"error": "transform_not_found", "transform": transform_label})
+        return
+
+    # prepare entity argument expected by transforms (Vertex if available)
+    entity_dict = entity_payload
+    entity_data = entity_dict.get("data", {})
+    entity_arg = Vertex(**{
+        **{to_snake_case(k): v for k, v in entity_data.items()},
+        "id": entity_dict.get("id"),
+        "label": entity_data.get("label")
+    })
+
+
+    # parse cfg if provided (cli sends string)
+    cfg_obj = None
+    if cfg:
+        try:
+            cfg_obj = json.loads(cfg)
+        except Exception:
+            cfg_obj = cfg
+
+    # call the transform. decorator wrapper expects (self=None, entity=..., **kwargs)
+    plugin_instance = plugin_cls()
+    sig = inspect.signature(transform_fn)
+    kwargs = {}
+    if "cfg" in sig.parameters:
+        kwargs["cfg"] = cfg_obj
+
+    try:
+        result = await transform_fn(self=plugin_instance, entity=entity_arg, **kwargs)
+    except TypeError:
+        # older wrapper signatures might be (entity, **kwargs)
+        result = await transform_fn(entity=entity_arg, **kwargs)
+
+    # normalize to list/dict exactly like Plugin.run did earlier: ensure edge_label present
+    if isinstance(result, dict):
+        result.setdefault("edge_label", getattr(transform_fn, "edge_label", tkey))
+        result = [result]
+    elif isinstance(result, list):
+        for r in result:
+            if isinstance(r, dict):
+                r.setdefault("edge_label", getattr(transform_fn, "edge_label", tkey))
+    printjson(result)
 
 
 async def list_transforms(label: str, plugins_path: str | None = None):
     prepare_run(plugins_path)
-    plugin = await Registry.get_entity(label)
-    if plugin is None:
+    if label is None:
+        printjson([])
         return []
-    transforms = plugin().transform_labels
+
+    # registry keys are snake_case
+    snake = to_snake_case(label)
+    plugin_cls = await Registry.get_entity(snake)
+    if plugin_cls is None:
+        printjson([])
+        return []
+
+    # derive entity_id and version from plugin class
+    entity_id = getattr(plugin_cls, "entity_id", None) or to_snake_case(plugin_cls.label)
+    entity_version = getattr(plugin_cls, "version", "0")
+
+    mapping = Registry.find_transforms(entity_id, entity_version)  # dict[label -> fn]
+    transforms = [
+        {
+            "label": lbl,
+            "icon": getattr(fn, "icon", "list"),
+            "edge_label": getattr(fn, "edge_label", lbl)
+        }
+        for lbl, fn in mapping.items()
+    ]
     printjson(transforms)
     return transforms
+
 
 
 def list_plugins(plugins_path = None):
@@ -234,7 +299,7 @@ def main():
     if command is None:
         parser.error("Command not recognized!")
 
-    plugins_path = args.plugins if args.plugins is None else args.plugins[0]
+    plugins_path = args.plugins[0] if args.plugins else None
     label = args.label if args.label is None else args.label[0]
     if "run" in cmd_fn_key:
         asyncio.run(command(plugins_path=plugins_path, source=args.transform[0]))
