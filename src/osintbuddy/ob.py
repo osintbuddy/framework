@@ -192,35 +192,36 @@ async def run_transform(plugins_path: str, source: str, settings = None, cfg: st
                 r.setdefault("edge_label", getattr(transform_fn, "edge_label", tkey))
     printjson(result)
 
-
 async def list_transforms(label: str, plugins_path: str | None = None):
     prepare_run(plugins_path)
-    if label is None:
-        printjson([])
+    if not label:
+        print([])
         return []
-
-    # registry keys are snake_case
-    snake = to_snake_case(label)
-    plugin_cls = await Registry.get_entity(snake)
+    
+    snake_label = to_snake_case(label)
+    plugin_cls = await Registry.get_entity(snake_label)
     if plugin_cls is None:
-        printjson([])
+        print([])
         return []
 
-    # derive entity_id and version from plugin class
     entity_id = getattr(plugin_cls, "entity_id", None) or to_snake_case(plugin_cls.label)
     entity_version = getattr(plugin_cls, "version", "0")
+    mapping = Registry.find_transforms(entity_id, entity_version)
+    if not mapping:
+        print([])
+        return []
 
-    mapping = Registry.find_transforms(entity_id, entity_version)  # dict[label -> fn]
-    transforms = [
-        {
-            "label": lbl,
+    transforms = []
+    for fn in mapping.values():
+        transforms.append({
+            "label": getattr(fn, "label", "unknown"),       # <-- use the user-defined label
             "icon": getattr(fn, "icon", "list"),
-            "edge_label": getattr(fn, "edge_label", lbl)
-        }
-        for lbl, fn in mapping.items()
-    ]
+            "edge_label": getattr(fn, "edge_label", getattr(fn, "label", "unknown")),
+        })
+
     printjson(transforms)
     return transforms
+
 
 
 
