@@ -14,7 +14,7 @@ from osintbuddy.utils import to_snake_case
 
 E = NewType('E', BaseElement)
 
-class Vertex(BaseModel):
+class TransformPayload(BaseModel):
     model_config = ConfigDict(extra="allow", frozen=False, populate_by_name=True, arbitrary_types_allowed=True)
 
 
@@ -25,7 +25,7 @@ class TransformFunction(Protocol):
     entity_transform: Awaitable[Any]
     entity_version: Version
     
-    def __call__(self, entity: Vertex, **kwargs: Any) -> Awaitable[Any]: ...
+    def __call__(self, entity: TransformPayload, **kwargs: Any) -> Awaitable[Any]: ...
 
 
 def plugin_results_middleman(f):
@@ -293,12 +293,12 @@ class Plugin(object, metaclass=Registry):
                 sig = inspect.signature(transform_fn)
                 if 'cfg' in sig.parameters:
                     result = await transform_fn(
-                        entity=Vertex(**entity),
+                        entity=TransformPayload(**entity),
                         cfg=cfg
                     )
                 else:
                     result = await transform_fn(
-                        entity=Vertex(**entity),
+                        entity=TransformPayload(**entity),
                     )
                 # Pull the declared edge label from the transform function metadata
                 edge_label = getattr(transform_fn, 'edge_label', transform_type)

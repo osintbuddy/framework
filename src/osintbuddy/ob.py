@@ -15,7 +15,7 @@ from pyfiglet import figlet_format
 from termcolor import colored
 from pydantic import BaseModel
 from osintbuddy import Registry, __version__, load_plugins_fs
-from osintbuddy.plugins import Vertex
+from osintbuddy.plugins import TransformPayload
 from osintbuddy.utils import to_snake_case
 
 APP_INFO = \
@@ -151,10 +151,10 @@ async def run_transform(plugins_path: str, source: str, settings = None, cfg: st
         printjson({"error": "transform_not_found", "transform": transform_label})
         return
 
-    # prepare entity argument expected by transforms (Vertex if available)
+    # prepare entity argument expected by transforms (TransformPayload if available)
     entity_dict = entity_payload
     entity_data = entity_dict.get("data", {})
-    entity_arg = Vertex(**{
+    entity_arg = TransformPayload(**{
         **{to_snake_case(k): v for k, v in entity_data.items()},
         "id": entity_dict.get("id"),
         "label": entity_data.get("label")
