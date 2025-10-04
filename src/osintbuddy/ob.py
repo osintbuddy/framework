@@ -240,23 +240,108 @@ class EntityCreate(BaseModel):
 
 
 def list_entities(plugins_path = None):
-    # dev mode plugins...
+    """Return a lightweight list of entities (backward-compatible).
+
+    This preserves the original output structure for callers that expect
+    just label/author/description/source/last_edit.
+    """
     import os, sys
     from datetime import datetime
     prepare_run(plugins_path)
     plugins = []
     for plugin in Registry.plugins.values():
         path = f"{sys.modules[plugin.__module__].__file__}"
-        source = open(path, "r").read()
+        with open(path, "r") as fh:
+            source = fh.read()
         last_file_edit = datetime.utcfromtimestamp(os.path.getmtime(path)).strftime('%Y-%m-%d %H:%M:%S')
         plugins.append(dict(
-            label=plugin.label,
-            author=plugin.author,
-            description=plugin.description,
+            label=getattr(plugin, 'label', 'unknown'),
+            author=getattr(plugin, 'author', 'Unknown author'),
+            description=getattr(plugin, 'description', 'No description found...'),
             source=source,
             last_edit=last_file_edit,
         ))
     printjson(plugins)
+
+
+def entities_json(plugins_path: str | None = None):
+    """Dump full entity information as JSON suitable for UI display.
+
+    Output shape aligns with the frontend Entity expectations where possible:
+    - id: snake_case label or declared entity_id
+    - label, description, author
+    - source: file contents (for dev inspection)
+    - ctime, mtime: ISO8601 strings derived from plugin file times
+    - transforms: list with label, icon, edge_label
+    - blueprint: entity blueprint dict (if available)
+    """
+    import os, sys
+    from datetime import datetime, timezone
+
+    def iso8601(ts: float) -> str:
+        return datetime.fromtimestamp(ts, tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+    prepare_run(plugins_path)
+    results = []
+
+    for plugin_cls in Registry.plugins.values():
+        # Resolve file path and times
+        module_file = f"{sys.modules[plugin_cls.__module__].__file__}"
+        try:
+            with open(module_file, 'r') as fh:
+                source = fh.read()
+        except Exception:
+            source = None
+        try:
+            stat = os.stat(module_file)
+            ctime = iso8601(stat.st_ctime)
+            mtime = iso8601(stat.st_mtime)
+        except Exception:
+            ctime = None
+            mtime = None
+
+        # Identity fields
+        label = getattr(plugin_cls, 'label', 'unknown')
+        entity_id = getattr(plugin_cls, 'entity_id', None) or to_snake_case(label)
+        version = getattr(plugin_cls, 'version', '0')
+        author = getattr(plugin_cls, 'author', 'Unknown author')
+        description = getattr(plugin_cls, 'description', 'No description found...')
+
+        # Blueprint (if provided by plugin)
+        try:
+            blueprint = plugin_cls.blueprint()
+        except Exception:
+            blueprint = None
+
+        # Transforms registered for this entity
+        mapping = Registry.find_transforms(entity_id, version) or {}
+        transforms = []
+        for fn in mapping.values():
+            transforms.append({
+                'label': getattr(fn, 'label', 'unknown'),
+                'icon': getattr(fn, 'icon', 'list'),
+                'edge_label': getattr(fn, 'edge_label', getattr(fn, 'label', 'unknown')),
+            })
+
+        results.append({
+            'id': entity_id,
+            'label': label,
+            'description': description,
+            'author': author,
+            'source': source,
+            'source_path': module_file,
+            'ctime': ctime,
+            'mtime': mtime,
+            'blueprint': blueprint,
+            'transforms': transforms,
+        })
+
+    # For UI parity with Panels, include top-level keys
+    payload = {
+        'entities': results,
+        'favorites': [],
+    }
+    printjson(payload)
 
 
 async def get_blueprints(label: str | None = None, plugins_path: str | None = None):
@@ -284,6 +369,7 @@ commands = {
     "ls transforms": list_transforms,
     "ls plugins": list_plugins,
     "ls entities": list_entities,
+    "entities json": entities_json,
     "blueprints": get_blueprints
 }
 
@@ -307,6 +393,8 @@ def main():
     elif "ls plugins" in cmd_fn_key:
             command(plugins_path=plugins_path)
     elif "ls entities" in cmd_fn_key:
+        command(plugins_path=plugins_path)
+    elif "entities json" in cmd_fn_key:
         command(plugins_path=plugins_path)
     elif "ls transforms" in cmd_fn_key:
         asyncio.run(command(label=label, plugins_path=plugins_path))
