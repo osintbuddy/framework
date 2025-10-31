@@ -352,7 +352,7 @@ async def get_blueprints(label: str | None = None, plugins_path: str | None = No
                    for label in Registry.labels]
         for entity in plugins:
             blueprint = entity.blueprint()
-            blueprints[to_snake_case(blueprint.get('label'))] = blueprint
+            blueprints[blueprint.get('label')] = blueprint
         printjson(blueprints)
         return blueprints
     plugin = await Registry.get_entity(label)
