@@ -38,25 +38,25 @@ class PersonEntity(Plugin):
 
 ### Required Attributes
 
-| Attribute | Type | Description |
-|-----------|------|-------------|
-| `version` | `str` | Semantic version (e.g., "1.0.0", "2.1.0") |
-| `label` | `str` | Display name shown in the UI |
-| `elements` | `list` | Form field definitions |
+| Attribute  | Type   | Description                               |
+| ---------- | ------ | ----------------------------------------- |
+| `version`  | `str`  | Semantic version (e.g., "1.0.0", "2.1.0") |
+| `label`    | `str`  | Display name shown in the UI              |
+| `elements` | `list` | Form field definitions                    |
 
 ### Optional Attributes
 
-| Attribute | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `entity_id` | `str` | Auto-generated | Override the entity identifier |
-| `description` | `str` | `""` | Long description for documentation |
-| `author` | `str \| list[str]` | `""` | Plugin author(s) |
-| `icon` | `str` | `"atom-2"` | Icon identifier |
-| `color` | `str` | `"#145070"` | Hex color code |
-| `category` | `str` | `""` | UI grouping category |
-| `tags` | `list[str]` | `[]` | Searchable tags |
-| `show_in_ui` | `bool` | `True` | Show in entity picker dialog |
-| `deps` | `list[str]` | `[]` | Plugin-level Python dependencies |
+| Attribute     | Type               | Default        | Description                        |
+| ------------- | ------------------ | -------------- | ---------------------------------- |
+| `entity_id`   | `str`              | Auto-generated | Override the entity identifier     |
+| `description` | `str`              | `""`           | Long description for documentation |
+| `author`      | `str \| list[str]` | `""`           | Plugin author(s)                   |
+| `icon`        | `str`              | `"atom-2"`     | Icon identifier                    |
+| `color`       | `str`              | `"#145070"`    | Hex color code                     |
+| `category`    | `str`              | `""`           | UI grouping category               |
+| `tags`        | `list[str]`        | `[]`           | Searchable tags                    |
+| `show_in_ui`  | `bool`             | `True`         | Show in entity picker dialog       |
+| `deps`        | `list[str]`        | `[]`           | Plugin-level Python dependencies   |
 
 ## Entity Identification
 

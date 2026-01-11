@@ -29,7 +29,7 @@ class MyEntity(Plugin):
 
 #### Methods
 
-##### blueprint(**kwargs) -> dict
+##### blueprint(\*\*kwargs) -> dict
 
 Generate entity definition with optional field values.
 
@@ -37,7 +37,7 @@ Generate entity definition with optional field values.
 data = MyEntity.blueprint(field1="value1", field2="value2")
 ```
 
-##### create(**kwargs) -> dict
+##### create(\*\*kwargs) -> dict
 
 Create a simpler entity instance dict.
 
@@ -668,6 +668,7 @@ load_plugins_fs(
 ```
 
 The function:
+
 1. Loads entities from `{path}/entities/*.py`
 2. Loads transforms from `{path}/transforms/*.py`
 3. Installs plugin-level dependencies
@@ -699,5 +700,5 @@ from osintbuddy.utils import (
 ```python
 from osintbuddy import __version__
 
-print(__version__)  # "0.4.0"
+print(__version__)  # "1.0.0"
 ```

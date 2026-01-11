@@ -7,12 +7,14 @@ Field types provide semantic meaning to entity fields, enabling type inference a
 > **Note:** The field_type system is currently **infrastructure for future functionality**. While you can assign field types to elements and transforms can declare `accepts`/`produces`, automatic type-based transform matching is not yet implemented. Transforms are currently matched by `entity_id` and `version` only.
 >
 > **What works now:**
+>
 > - Assigning `field_type` to elements (serialized to blueprints)
 > - `get_field_type()` for inferring types from string values
 > - `are_types_compatible()` for checking type relationships
 > - `accepts`/`produces` stored on transforms (for future use)
 >
 > **Coming in future releases:**
+>
 > - `entity.get_typed_field()` to retrieve fields by type
 > - Automatic transform matching based on field types
 > - Cross-entity transforms with `target="*"`
@@ -49,88 +51,88 @@ async def validate_email(entity):
 
 ### Identity
 
-| Type | Description | Example |
-|------|-------------|---------|
-| `EMAIL` | Email address | user@example.com |
-| `PHONE` | Phone number | +1-555-123-4567 |
-| `USERNAME` | Username/handle | johndoe |
-| `PERSON_NAME` | Full person name | John Doe |
-| `ORGANIZATION` | Organization name | Acme Corporation |
-| `ALIAS` | Alternative name/alias | JD |
+| Type           | Description            | Example          |
+| -------------- | ---------------------- | ---------------- |
+| `EMAIL`        | Email address          | user@example.com |
+| `PHONE`        | Phone number           | +1-555-123-4567  |
+| `USERNAME`     | Username/handle        | johndoe          |
+| `PERSON_NAME`  | Full person name       | John Doe         |
+| `ORGANIZATION` | Organization name      | Acme Corporation |
+| `ALIAS`        | Alternative name/alias | JD               |
 
 ### Network
 
-| Type | Description | Example |
-|------|-------------|---------|
-| `IP_ADDRESS` | IPv4 or IPv6 address | 192.168.1.1 |
-| `IPV4` | IPv4 address | 192.168.1.1 |
-| `IPV6` | IPv6 address | 2001:db8::1 |
-| `MAC_ADDRESS` | MAC address | 00:1A:2B:3C:4D:5E |
-| `DOMAIN` | Domain name | example.com |
-| `SUBDOMAIN` | Subdomain | api.example.com |
-| `URL` | Full URL | https://example.com/path |
-| `PORT` | Port number | 443 |
+| Type          | Description          | Example                  |
+| ------------- | -------------------- | ------------------------ |
+| `IP_ADDRESS`  | IPv4 or IPv6 address | 192.168.1.1              |
+| `IPV4`        | IPv4 address         | 192.168.1.1              |
+| `IPV6`        | IPv6 address         | 2001:db8::1              |
+| `MAC_ADDRESS` | MAC address          | 00:1A:2B:3C:4D:5E        |
+| `DOMAIN`      | Domain name          | example.com              |
+| `SUBDOMAIN`   | Subdomain            | api.example.com          |
+| `URL`         | Full URL             | https://example.com/path |
+| `PORT`        | Port number          | 443                      |
 
 ### Location
 
-| Type | Description | Example |
-|------|-------------|---------|
-| `ADDRESS` | Physical address | 123 Main St |
-| `CITY` | City name | New York |
-| `COUNTRY` | Country name/code | United States |
-| `COORDINATES` | Lat/long pair | 40.7128,-74.0060 |
-| `LATITUDE` | Latitude | 40.7128 |
-| `LONGITUDE` | Longitude | -74.0060 |
+| Type          | Description       | Example          |
+| ------------- | ----------------- | ---------------- |
+| `ADDRESS`     | Physical address  | 123 Main St      |
+| `CITY`        | City name         | New York         |
+| `COUNTRY`     | Country name/code | United States    |
+| `COORDINATES` | Lat/long pair     | 40.7128,-74.0060 |
+| `LATITUDE`    | Latitude          | 40.7128          |
+| `LONGITUDE`   | Longitude         | -74.0060         |
 
 ### Social Media
 
-| Type | Description | Example |
-|------|-------------|---------|
-| `SOCIAL_PROFILE` | Profile URL | https://twitter.com/user |
-| `SOCIAL_HANDLE` | Social handle | @username |
-| `SOCIAL_PLATFORM` | Platform name | Twitter |
+| Type              | Description   | Example                  |
+| ----------------- | ------------- | ------------------------ |
+| `SOCIAL_PROFILE`  | Profile URL   | https://twitter.com/user |
+| `SOCIAL_HANDLE`   | Social handle | @username                |
+| `SOCIAL_PLATFORM` | Platform name | Twitter                  |
 
 ### Documents & Files
 
-| Type | Description | Example |
-|------|-------------|---------|
-| `HASH_MD5` | MD5 hash | d41d8cd98f00b204... |
-| `HASH_SHA1` | SHA-1 hash | da39a3ee5e6b4b0d... |
+| Type          | Description  | Example             |
+| ------------- | ------------ | ------------------- |
+| `HASH_MD5`    | MD5 hash     | d41d8cd98f00b204... |
+| `HASH_SHA1`   | SHA-1 hash   | da39a3ee5e6b4b0d... |
 | `HASH_SHA256` | SHA-256 hash | e3b0c44298fc1c14... |
-| `FILE_PATH` | File path | /home/user/doc.pdf |
-| `FILE_NAME` | File name | document.pdf |
+| `FILE_PATH`   | File path    | /home/user/doc.pdf  |
+| `FILE_NAME`   | File name    | document.pdf        |
 
 ### Financial
 
-| Type | Description | Example |
-|------|-------------|---------|
-| `BITCOIN_ADDRESS` | Bitcoin address | 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa |
-| `ETHEREUM_ADDRESS` | Ethereum address | 0x742d35Cc6634C0532925a3b844Bc9e7595f... |
-| `CRYPTO_ADDRESS` | Any crypto address | (various formats) |
-| `CREDIT_CARD` | Credit card number | 4111111111111111 |
-| `IBAN` | IBAN number | DE89370400440532013000 |
+| Type               | Description        | Example                                  |
+| ------------------ | ------------------ | ---------------------------------------- |
+| `BITCOIN_ADDRESS`  | Bitcoin address    | 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa       |
+| `ETHEREUM_ADDRESS` | Ethereum address   | 0x742d35Cc6634C0532925a3b844Bc9e7595f... |
+| `CRYPTO_ADDRESS`   | Any crypto address | (various formats)                        |
+| `CREDIT_CARD`      | Credit card number | 4111111111111111                         |
+| `IBAN`             | IBAN number        | DE89370400440532013000                   |
 
 ### Technical
 
-| Type | Description | Example |
-|------|-------------|---------|
-| `CVE` | CVE identifier | CVE-2021-44228 |
-| `ASN` | AS number | AS15169 |
-| `CIDR` | CIDR notation | 192.168.0.0/24 |
-| `SSL_CERT` | SSL certificate | (PEM format) |
-| `API_KEY` | API key | sk-abc123... |
+| Type       | Description     | Example        |
+| ---------- | --------------- | -------------- |
+| `CVE`      | CVE identifier  | CVE-2021-44228 |
+| `ASN`      | AS number       | AS15169        |
+| `CIDR`     | CIDR notation   | 192.168.0.0/24 |
+| `SSL_CERT` | SSL certificate | (PEM format)   |
+| `API_KEY`  | API key         | sk-abc123...   |
 
 ### Generic
 
-| Type | Description | Example |
-|------|-------------|---------|
-| `TEXT` | Generic text | Any text |
-| `NUMBER` | Numeric value | 42 |
-| `DATE` | Date | 2024-01-15 |
-| `DATETIME` | Date and time | 2024-01-15T10:30:00Z |
-| `JSON` | JSON data | {"key": "value"} |
-| `NOTES` | Notes/comments | Free-form text |
-| `CUSTOM` | Custom type | User-defined |
+| Type       | Description    | Example              |
+| ---------- | -------------- | -------------------- |
+| `TEXT`     | Generic text   | Any text             |
+| `NUMBER`   | Numeric value  | 42                   |
+| `DATE`     | Date           | 2024-01-15           |
+| `DATETIME` | Date and time  | 2024-01-15T10:30:00Z |
+| `JSON`     | JSON data      | {"key": "value"}     |
+| `NOTES`    | Notes/comments | Free-form text       |
+| `CUSTOM`   | Custom type    | User-defined         |
 
 ## Using Field Types
 
@@ -201,10 +203,10 @@ are_types_compatible(FieldType.HASH_SHA256, FieldType.HASH_MD5)  # True
 
 Compatibility rules:
 
-| Parent Type | Compatible With |
-|-------------|----------------|
-| `IP_ADDRESS` | `IPV4`, `IPV6` |
-| `HASH_SHA256` | `HASH_MD5`, `HASH_SHA1` |
+| Parent Type      | Compatible With                       |
+| ---------------- | ------------------------------------- |
+| `IP_ADDRESS`     | `IPV4`, `IPV6`                        |
+| `HASH_SHA256`    | `HASH_MD5`, `HASH_SHA1`               |
 | `CRYPTO_ADDRESS` | `BITCOIN_ADDRESS`, `ETHEREUM_ADDRESS` |
 
 ## Type Inference
@@ -225,18 +227,18 @@ get_field_type("CVE-2021-44228")          # FieldType.CVE
 
 Detection patterns:
 
-| Pattern | Detected Type |
-|---------|--------------|
-| Email regex | `EMAIL` |
-| IPv4 format | `IPV4` |
-| IPv6 format | `IPV6` |
-| URL scheme | `URL` |
-| Domain pattern | `DOMAIN` |
-| MD5 (32 hex) | `HASH_MD5` |
-| SHA-1 (40 hex) | `HASH_SHA1` |
-| SHA-256 (64 hex) | `HASH_SHA256` |
-| CVE pattern | `CVE` |
-| Bitcoin address | `BITCOIN_ADDRESS` |
+| Pattern          | Detected Type      |
+| ---------------- | ------------------ |
+| Email regex      | `EMAIL`            |
+| IPv4 format      | `IPV4`             |
+| IPv6 format      | `IPV6`             |
+| URL scheme       | `URL`              |
+| Domain pattern   | `DOMAIN`           |
+| MD5 (32 hex)     | `HASH_MD5`         |
+| SHA-1 (40 hex)   | `HASH_SHA1`        |
+| SHA-256 (64 hex) | `HASH_SHA256`      |
+| CVE pattern      | `CVE`              |
+| Bitcoin address  | `BITCOIN_ADDRESS`  |
 | Ethereum address | `ETHEREUM_ADDRESS` |
 
 ## TypedValue Wrapper

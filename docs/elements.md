@@ -6,10 +6,10 @@ Elements are the building blocks of entity forms. They define what data an entit
 
 All elements share common attributes:
 
-| Attribute | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `label` | `str` | Required | Element identifier and display label |
-| `width` | `int` | `12` | Grid width (1-12, where 12 is full width) |
+| Attribute | Type  | Default  | Description                               |
+| --------- | ----- | -------- | ----------------------------------------- |
+| `label`   | `str` | Required | Element identifier and display label      |
+| `width`   | `int` | `12`     | Grid width (1-12, where 12 is full width) |
 
 Import elements from `osintbuddy.elements`:
 
@@ -70,13 +70,13 @@ TextInput(
 )
 ```
 
-| Attribute | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `label` | `str` | Required | Field label |
-| `icon` | `str` | `None` | Icon identifier |
-| `value` | `str` | `""` | Default value |
-| `field_type` | `FieldType` | `None` | Semantic field type |
-| `width` | `int` | `12` | Grid width |
+| Attribute    | Type        | Default  | Description         |
+| ------------ | ----------- | -------- | ------------------- |
+| `label`      | `str`       | Required | Field label         |
+| `icon`       | `str`       | `None`   | Icon identifier     |
+| `value`      | `str`       | `""`     | Default value       |
+| `field_type` | `FieldType` | `None`   | Semantic field type |
+| `width`      | `int`       | `12`     | Grid width          |
 
 ### TextAreaInput
 
@@ -93,12 +93,12 @@ TextAreaInput(
 )
 ```
 
-| Attribute | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `label` | `str` | Required | Field label |
-| `value` | `str` | `""` | Default value |
-| `field_type` | `FieldType` | `None` | Semantic field type |
-| `width` | `int` | `12` | Grid width |
+| Attribute    | Type        | Default  | Description         |
+| ------------ | ----------- | -------- | ------------------- |
+| `label`      | `str`       | Required | Field label         |
+| `value`      | `str`       | `""`     | Default value       |
+| `field_type` | `FieldType` | `None`   | Semantic field type |
+| `width`      | `int`       | `12`     | Grid width          |
 
 ### DropdownInput
 
@@ -119,12 +119,12 @@ DropdownInput(
 )
 ```
 
-| Attribute | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `label` | `str` | Required | Field label |
-| `options` | `list[dict]` | `[]` | Options with `label` and `value` |
-| `value` | `str` | `""` | Default selected value |
-| `width` | `int` | `12` | Grid width |
+| Attribute | Type         | Default  | Description                      |
+| --------- | ------------ | -------- | -------------------------------- |
+| `label`   | `str`        | Required | Field label                      |
+| `options` | `list[dict]` | `[]`     | Options with `label` and `value` |
+| `value`   | `str`        | `""`     | Default selected value           |
+| `width`   | `int`        | `12`     | Grid width                       |
 
 ### UploadFileInput
 
@@ -139,10 +139,10 @@ UploadFileInput(
 )
 ```
 
-| Attribute | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `label` | `str` | Required | Field label |
-| `icon` | `str` | `None` | Icon identifier |
+| Attribute | Type  | Default  | Description     |
+| --------- | ----- | -------- | --------------- |
+| `label`   | `str` | Required | Field label     |
+| `icon`    | `str` | `None`   | Icon identifier |
 
 ---
 
@@ -164,11 +164,11 @@ Title(
 )
 ```
 
-| Attribute | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `label` | `str` | Required | Element label |
-| `value` | `str` | `""` | Display value |
-| `width` | `int` | `12` | Grid width |
+| Attribute | Type  | Default  | Description   |
+| --------- | ----- | -------- | ------------- |
+| `label`   | `str` | Required | Element label |
+| `value`   | `str` | `""`     | Display value |
+| `width`   | `int` | `12`     | Grid width    |
 
 ### Text
 
@@ -185,12 +185,12 @@ Text(
 )
 ```
 
-| Attribute | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `label` | `str` | Required | Element label |
-| `value` | `str` | `""` | Display value |
-| `icon` | `str` | `None` | Icon identifier |
-| `width` | `int` | `12` | Grid width |
+| Attribute | Type  | Default  | Description     |
+| --------- | ----- | -------- | --------------- |
+| `label`   | `str` | Required | Element label   |
+| `value`   | `str` | `""`     | Display value   |
+| `icon`    | `str` | `None`   | Icon identifier |
+| `width`   | `int` | `12`     | Grid width      |
 
 ### CopyText
 
@@ -206,11 +206,11 @@ CopyText(
 )
 ```
 
-| Attribute | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `label` | `str` | Required | Element label |
-| `value` | `str` | `""` | Copyable value |
-| `width` | `int` | `12` | Grid width |
+| Attribute | Type  | Default  | Description    |
+| --------- | ----- | -------- | -------------- |
+| `label`   | `str` | Required | Element label  |
+| `value`   | `str` | `""`     | Copyable value |
+| `width`   | `int` | `12`     | Grid width     |
 
 ### CopyCode
 
@@ -226,11 +226,11 @@ CopyCode(
 )
 ```
 
-| Attribute | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `label` | `str` | Required | Element label |
-| `value` | `str` | `""` | Code content |
-| `width` | `int` | `12` | Grid width |
+| Attribute | Type  | Default  | Description   |
+| --------- | ----- | -------- | ------------- |
+| `label`   | `str` | Required | Element label |
+| `value`   | `str` | `""`     | Code content  |
+| `width`   | `int` | `12`     | Grid width    |
 
 ### Json
 
@@ -245,10 +245,10 @@ Json(
 )
 ```
 
-| Attribute | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `label` | `str` | Required | Element label |
-| `width` | `int` | `12` | Grid width |
+| Attribute | Type  | Default  | Description   |
+| --------- | ----- | -------- | ------------- |
+| `label`   | `str` | Required | Element label |
+| `width`   | `int` | `12`     | Grid width    |
 
 ### Image
 
@@ -263,10 +263,10 @@ Image(
 )
 ```
 
-| Attribute | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `label` | `str` | Required | Element label |
-| `width` | `int` | `12` | Grid width |
+| Attribute | Type  | Default  | Description   |
+| --------- | ----- | -------- | ------------- |
+| `label`   | `str` | Required | Element label |
+| `width`   | `int` | `12`     | Grid width    |
 
 ### Video
 
@@ -281,10 +281,10 @@ Video(
 )
 ```
 
-| Attribute | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `label` | `str` | Required | Element label |
-| `width` | `int` | `12` | Grid width |
+| Attribute | Type  | Default  | Description   |
+| --------- | ----- | -------- | ------------- |
+| `label`   | `str` | Required | Element label |
+| `width`   | `int` | `12`     | Grid width    |
 
 ### Pdf
 
@@ -299,10 +299,10 @@ Pdf(
 )
 ```
 
-| Attribute | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `label` | `str` | Required | Element label |
-| `width` | `int` | `12` | Grid width |
+| Attribute | Type  | Default  | Description   |
+| --------- | ----- | -------- | ------------- |
+| `label`   | `str` | Required | Element label |
+| `width`   | `int` | `12`     | Grid width    |
 
 ### List
 
@@ -317,10 +317,10 @@ List(
 )
 ```
 
-| Attribute | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `label` | `str` | Required | Element label |
-| `width` | `int` | `12` | Grid width |
+| Attribute | Type  | Default  | Description   |
+| --------- | ----- | -------- | ------------- |
+| `label`   | `str` | Required | Element label |
+| `width`   | `int` | `12`     | Grid width    |
 
 ### Table
 
@@ -335,10 +335,10 @@ Table(
 )
 ```
 
-| Attribute | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `label` | `str` | Required | Element label |
-| `width` | `int` | `12` | Grid width |
+| Attribute | Type  | Default  | Description   |
+| --------- | ----- | -------- | ------------- |
+| `label`   | `str` | Required | Element label |
+| `width`   | `int` | `12`     | Grid width    |
 
 ### Empty
 
@@ -352,9 +352,9 @@ Empty(
 )
 ```
 
-| Attribute | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `width` | `int` | `12` | Grid width |
+| Attribute | Type  | Default | Description |
+| --------- | ----- | ------- | ----------- |
+| `width`   | `int` | `12`    | Grid width  |
 
 ---
 
@@ -520,8 +520,8 @@ Elements can be defined in JSON for the compiler:
       "type": "dropdown",
       "label": "Status",
       "options": [
-        {"label": "Active", "value": "active"},
-        {"label": "Inactive", "value": "inactive"}
+        { "label": "Active", "value": "active" },
+        { "label": "Inactive", "value": "inactive" }
       ],
       "width": 6
     },
@@ -547,23 +547,23 @@ Elements can be defined in JSON for the compiler:
 
 Type mapping:
 
-| JSON type | Python class |
-|-----------|-------------|
-| `text` | `TextInput` |
-| `textarea` | `TextAreaInput` |
-| `dropdown` | `DropdownInput` |
-| `upload` | `UploadFileInput` |
-| `title` | `Title` |
-| `text_display` | `Text` |
-| `copy_text` | `CopyText` |
-| `copy_code` | `CopyCode` |
-| `json` | `Json` |
-| `image` | `Image` |
-| `video` | `Video` |
-| `pdf` | `Pdf` |
-| `list` | `List` |
-| `table` | `Table` |
-| `empty` | `Empty` |
+| JSON type      | Python class      |
+| -------------- | ----------------- |
+| `text`         | `TextInput`       |
+| `textarea`     | `TextAreaInput`   |
+| `dropdown`     | `DropdownInput`   |
+| `upload`       | `UploadFileInput` |
+| `title`        | `Title`           |
+| `text_display` | `Text`            |
+| `copy_text`    | `CopyText`        |
+| `copy_code`    | `CopyCode`        |
+| `json`         | `Json`            |
+| `image`        | `Image`           |
+| `video`        | `Video`           |
+| `pdf`          | `Pdf`             |
+| `list`         | `List`            |
+| `table`        | `Table`           |
+| `empty`        | `Empty`           |
 
 ## Next Steps
 

@@ -13,58 +13,20 @@ ob --help
 
 ## Commands Overview
 
-| Command | Description |
-|---------|-------------|
-| `ob start` | Start the plugin microservice |
-| `ob init` | Initialize default entities from GitHub |
-| `ob transform` | Execute a transform |
-| `ob entities` | List entities |
-| `ob transforms` | List transforms for an entity |
-| `ob ls plugins` | List all plugins |
-| `ob entities json` | Get entity information as JSON |
-| `ob blueprints` | Get entity blueprints |
-| `ob compile` | Compile JSON entities to Python |
+| Command            | Description                             |
+| ------------------ | --------------------------------------- |
+| `ob init`          | Initialize default entities from GitHub |
+| `ob transform`     | Execute a transform                     |
+| `ob entities`      | List entities                           |
+| `ob transforms`    | List transforms for an entity           |
+| `ob plugins`       | List all plugins                        |
+| `ob entities json` | Get entity information as JSON          |
+| `ob blueprints`    | Get entity blueprints                   |
+| `ob compile`       | Compile JSON entities to Python         |
 
 ---
 
-## ob start
-
-Start the FastAPI microservice for the OSINTBuddy application.
-
-```bash
-ob start [OPTIONS]
-```
-
-### Options
-
-| Option | Description |
-|--------|-------------|
-| `-P, --plugins PATH` | Path to plugins directory |
-| `--port PORT` | Port number (default: 42562) |
-| `--host HOST` | Host address (default: 127.0.0.1) |
-
-### Examples
-
-```bash
-# Start with default settings
-ob start
-
-# Start with custom plugins directory
-ob start -P /path/to/my-plugins
-
-# Start on a different port
-ob start --port 8080
-```
-
-The service exposes endpoints for:
-- Listing entities
-- Getting entity blueprints
-- Running transforms
-- Managing settings
-
----
-
-## ob init
+## `ob init`
 
 Download and initialize default entities from the OSINTBuddy GitHub repository.
 
@@ -74,8 +36,8 @@ ob init [OPTIONS]
 
 ### Options
 
-| Option | Description |
-|--------|-------------|
+| Option               | Description                  |
+| -------------------- | ---------------------------- |
 | `-P, --plugins PATH` | Destination path for plugins |
 
 ### Examples
@@ -90,7 +52,7 @@ ob init -P /path/to/plugins
 
 ---
 
-## ob transform
+## `ob transform`
 
 Execute a transform on an entity.
 
@@ -100,11 +62,11 @@ ob transform TRANSFORM_JSON [OPTIONS]
 
 ### Options
 
-| Option | Description |
-|--------|-------------|
-| `-P, --plugins PATH` | Plugins directory |
-| `-C, --config JSON` | Runtime configuration |
-| `--structured` | Use structured output with delimiters |
+| Option               | Description                           |
+| -------------------- | ------------------------------------- |
+| `-P, --plugins PATH` | Plugins directory                     |
+| `-C, --config JSON`  | Runtime configuration                 |
+| `--structured`       | Use structured output with delimiters |
 
 ### Transform Payload Format
 
@@ -148,6 +110,7 @@ ob transform '...' --structured
 When using `--structured`, output is wrapped with delimiters:
 
 **Success:**
+
 ```
 ---OSIB_JSON_START---
 {"entities": [...], "edges": [...]}
@@ -155,6 +118,7 @@ When using `--structured`, output is wrapped with delimiters:
 ```
 
 **Error:**
+
 ```
 ---OSIB_ERROR_START---
 {"code": "TRANSFORM_FAILED", "message": "...", "details": {...}}
@@ -162,13 +126,14 @@ When using `--structured`, output is wrapped with delimiters:
 ```
 
 **Progress:**
+
 ```
 ---OSIB_PROGRESS---{"message": "Processing...", "percent": 50}
 ```
 
 ---
 
-## ob entities
+## `ob entities`
 
 List entities (alias: `ob -e`).
 
@@ -176,8 +141,8 @@ List entities (alias: `ob -e`).
 ob entities [OPTIONS]
 ```
 
-| Option | Description |
-|--------|-------------|
+| Option               | Description       |
+| -------------------- | ----------------- |
 | `-P, --plugins PATH` | Plugins directory |
 
 ```bash
@@ -189,7 +154,7 @@ ob entities
 # ...
 ```
 
-## ob transforms
+## `ob transforms`
 
 List transforms for an entity (alias: `ob -t`).
 
@@ -197,10 +162,10 @@ List transforms for an entity (alias: `ob -t`).
 ob transforms [OPTIONS]
 ```
 
-| Option | Description |
-|--------|-------------|
-| `-L, --label LABEL` | Entity label to list transforms for |
-| `-P, --plugins PATH` | Plugins directory |
+| Option               | Description                         |
+| -------------------- | ----------------------------------- |
+| `-L, --label LABEL`  | Entity label to list transforms for |
+| `-P, --plugins PATH` | Plugins directory                   |
 
 **Note:** `-L` is required.
 
@@ -214,18 +179,18 @@ ob transforms -L email
 #   - find_social_profiles
 ```
 
-## ob ls plugins
+## `ob plugins`
 
 ```bash
-ob ls plugins [OPTIONS]
+ob plugins [OPTIONS]
 ```
 
-| Option | Description |
-|--------|-------------|
+| Option               | Description       |
+| -------------------- | ----------------- |
 | `-P, --plugins PATH` | Plugins directory |
 
 ```bash
-ob ls plugins
+ob plugins
 # Output:
 # Loaded plugins from /path/to/plugins:
 #   - email (v1.0.0)
@@ -235,7 +200,7 @@ ob ls plugins
 
 ---
 
-## ob entities json
+## `ob entities json`
 
 Get detailed entity information as JSON (for UI consumption).
 
@@ -245,8 +210,8 @@ ob entities json [OPTIONS]
 
 ### Options
 
-| Option | Description |
-|--------|-------------|
+| Option               | Description       |
+| -------------------- | ----------------- |
 | `-P, --plugins PATH` | Plugins directory |
 
 ### Examples
@@ -281,7 +246,7 @@ Output:
 
 ---
 
-## ob blueprints
+## `ob blueprints`
 
 Get entity blueprints for creating instances.
 
@@ -291,10 +256,10 @@ ob blueprints [OPTIONS]
 
 ### Options
 
-| Option | Description |
-|--------|-------------|
-| `-L, --label LABEL` | Specific entity label |
-| `-P, --plugins PATH` | Plugins directory |
+| Option               | Description           |
+| -------------------- | --------------------- |
+| `-L, --label LABEL`  | Specific entity label |
+| `-P, --plugins PATH` | Plugins directory     |
 
 ### Examples
 
@@ -327,7 +292,7 @@ Output:
 
 ---
 
-## ob compile
+## `ob compile`
 
 Compile JSON entity definitions to Python code.
 
@@ -337,9 +302,9 @@ Compile JSON entity definitions to Python code.
 ob compile FILE [OPTIONS]
 ```
 
-| Option | Description |
-|--------|-------------|
-| `-O, --output PATH` | Output file path |
+| Option                  | Description                     |
+| ----------------------- | ------------------------------- |
+| `-O, --output PATH`     | Output file path                |
 | `-V, --version VERSION` | Entity version (default: 1.0.0) |
 
 ```bash
@@ -359,9 +324,9 @@ ob compile email.json -O entities/email.py -V 2.0.0
 ob compile dir DIRECTORY [OPTIONS]
 ```
 
-| Option | Description |
-|--------|-------------|
-| `-O, --output PATH` | Output directory |
+| Option                  | Description                     |
+| ----------------------- | ------------------------------- |
+| `-O, --output PATH`     | Output directory                |
 | `-V, --version VERSION` | Entity version (default: 1.0.0) |
 
 ```bash
@@ -405,10 +370,10 @@ ob compile dir json-entities/ -O entities/
 
 ## Environment Variables
 
-| Variable | Description |
-|----------|-------------|
-| `OSINTBUDDY_PLUGINS_PATH` | Default plugins directory |
-| `OSINTBUDDY_CONFIG_DIR` | Settings directory (default: `~/.osintbuddy`) |
+| Variable                  | Description                                   |
+| ------------------------- | --------------------------------------------- |
+| `OSINTBUDDY_PLUGINS_PATH` | Default plugins directory                     |
+| `OSINTBUDDY_CONFIG_DIR`   | Settings directory (default: `~/.osintbuddy`) |
 
 ```bash
 export OSINTBUDDY_PLUGINS_PATH=/path/to/plugins
@@ -419,16 +384,16 @@ ob entities  # Uses OSINTBUDDY_PLUGINS_PATH
 
 ## Exit Codes
 
-| Code | Description |
-|------|-------------|
-| 0 | Success |
-| 1 | General error |
-| 2 | Invalid arguments |
-| 10 | Plugin not found |
-| 11 | Transform not found |
-| 12 | Transform failed |
-| 20 | Configuration error |
-| 30 | Network error |
+| Code | Description         |
+| ---- | ------------------- |
+| 0    | Success             |
+| 1    | General error       |
+| 2    | Invalid arguments   |
+| 10   | Plugin not found    |
+| 11   | Transform not found |
+| 12   | Transform failed    |
+| 20   | Configuration error |
+| 30   | Network error       |
 
 ---
 

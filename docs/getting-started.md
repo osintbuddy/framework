@@ -4,8 +4,8 @@ This guide walks you through installing OSINTBuddy, setting up a plugin project,
 
 ## Prerequisites
 
-- Python 3.12 or higher
-- pip or uv package manager
+- Python 3.12+
+- pip
 
 ## Installation
 
@@ -19,8 +19,8 @@ pip install osintbuddy
 
 ```bash
 git clone https://github.com/osintbuddy/plugins.git
-cd plugins/osib
-pip install -e ".[dev]"
+cd plugins/
+pip install -e ".[dev,all]"
 ```
 
 ### Verify Installation
@@ -50,6 +50,7 @@ my-osint-plugins/
 ```
 
 The framework expects:
+
 - **entities/**: Plugin class definitions (one per entity type)
 - **transforms/**: Transform functions decorated with `@transform`
 
@@ -89,17 +90,17 @@ class EmailEntity(Plugin):
 
 ### Key Attributes
 
-| Attribute | Required | Description |
-|-----------|----------|-------------|
-| `version` | Yes | Semantic version (e.g., "1.0.0") |
-| `label` | Yes | Display name in the UI |
-| `elements` | Yes | Form fields for the entity |
-| `icon` | No | Icon identifier (default: "atom-2") |
-| `color` | No | Hex color (default: "#145070") |
-| `category` | No | UI grouping category |
-| `description` | No | Long description |
-| `tags` | No | Searchable tags |
-| `show_in_ui` | No | Whether to show in entity picker (default: true) |
+| Attribute     | Required | Description                                      |
+| ------------- | -------- | ------------------------------------------------ |
+| `version`     | Yes      | Semantic version (e.g., "1.0.0")                 |
+| `label`       | Yes      | Display name in the UI                           |
+| `elements`    | Yes      | Form fields for the entity                       |
+| `icon`        | No       | Icon identifier (default: "atom-2")              |
+| `color`       | No       | Hex color (default: "#145070")                   |
+| `category`    | No       | UI grouping category                             |
+| `description` | No       | Long description                                 |
+| `tags`        | No       | Searchable tags                                  |
+| `show_in_ui`  | No       | Whether to show in entity picker (default: true) |
 
 ## Your First Transform
 
@@ -194,16 +195,6 @@ ob transform '{
   }
 }'
 ```
-
-### Via the Microservice
-
-Start the plugin microservice:
-
-```bash
-ob start
-```
-
-The service runs on port 42562 and exposes endpoints for the OSINTBuddy application.
 
 ## Returning Results
 

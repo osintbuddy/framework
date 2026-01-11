@@ -29,17 +29,17 @@ async def extract_domain(entity):
 
 ## Decorator Parameters
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `target` | `str` | Yes | Entity ID with optional version spec |
-| `label` | `str` | Yes | Display name in context menu |
-| `icon` | `str` | No | Icon identifier |
-| `edge_label` | `str` | No | Default edge label for results |
-| `deps` | `list[str]` | No | Python package dependencies |
-| `settings` | `list[TransformSetting]` | No | Configuration options |
-| `transform_set` | `TransformSet` | No | Grouping for organization |
-| `accepts` | `list[str]` | No | Field types this transform accepts |
-| `produces` | `list[str]` | No | Field types this transform produces |
+| Parameter       | Type                     | Required | Description                          |
+| --------------- | ------------------------ | -------- | ------------------------------------ |
+| `target`        | `str`                    | Yes      | Entity ID with optional version spec |
+| `label`         | `str`                    | Yes      | Display name in context menu         |
+| `icon`          | `str`                    | No       | Icon identifier                      |
+| `edge_label`    | `str`                    | No       | Default edge label for results       |
+| `deps`          | `list[str]`              | No       | Python package dependencies          |
+| `settings`      | `list[TransformSetting]` | No       | Configuration options                |
+| `transform_set` | `TransformSet`           | No       | Grouping for organization            |
+| `accepts`       | `list[str]`              | No       | Field types this transform accepts   |
+| `produces`      | `list[str]`              | No       | Field types this transform produces  |
 
 ## Version Targeting
 
@@ -297,6 +297,7 @@ async def custom_recon(entity):
 ```
 
 Built-in sets:
+
 - `OSINT_CORE` - Core reconnaissance
 - `SOCIAL_MEDIA` - Social platforms
 - `NETWORK` - Infrastructure

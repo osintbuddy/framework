@@ -54,29 +54,29 @@ async def whois_lookup(entity, cfg=None):
 
 ## TransformSetting Attributes
 
-| Attribute | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `name` | `str` | Required | Config key (used in code) |
-| `display_name` | `str` | Required | UI label |
-| `setting_type` | `SettingType` | Required | Validation type |
-| `default_value` | `str` | `""` | Default value |
-| `required` | `bool` | `False` | Whether setting is required |
-| `global_setting` | `bool` | `False` | Shared across all transforms |
-| `description` | `str` | `""` | Help text for users |
-| `popup` | `bool` | `False` | Show in popup dialog |
+| Attribute        | Type          | Default  | Description                  |
+| ---------------- | ------------- | -------- | ---------------------------- |
+| `name`           | `str`         | Required | Config key (used in code)    |
+| `display_name`   | `str`         | Required | UI label                     |
+| `setting_type`   | `SettingType` | Required | Validation type              |
+| `default_value`  | `str`         | `""`     | Default value                |
+| `required`       | `bool`        | `False`  | Whether setting is required  |
+| `global_setting` | `bool`        | `False`  | Shared across all transforms |
+| `description`    | `str`         | `""`     | Help text for users          |
+| `popup`          | `bool`        | `False`  | Show in popup dialog         |
 
 ## Setting Types
 
-| Type | Description | Example |
-|------|-------------|---------|
-| `STRING` | Text string | "value" |
-| `INT` | Integer number | "42" |
-| `FLOAT` | Decimal number | "3.14" |
-| `BOOL` | Boolean | "true" or "false" |
-| `URL` | URL string | "https://api.example.com" |
-| `PASSWORD` | Sensitive string (masked) | "secret123" |
-| `DATE` | Date | "2024-01-15" |
-| `DATETIME` | Date and time | "2024-01-15T10:30:00" |
+| Type       | Description               | Example                   |
+| ---------- | ------------------------- | ------------------------- |
+| `STRING`   | Text string               | "value"                   |
+| `INT`      | Integer number            | "42"                      |
+| `FLOAT`    | Decimal number            | "3.14"                    |
+| `BOOL`     | Boolean                   | "true" or "false"         |
+| `URL`      | URL string                | "https://api.example.com" |
+| `PASSWORD` | Sensitive string (masked) | "secret123"               |
+| `DATE`     | Date                      | "2024-01-15"              |
+| `DATETIME` | Date and time             | "2024-01-15T10:30:00"     |
 
 ## Storage Location
 
