@@ -193,5 +193,6 @@ MIT License, see [LICENSE](LICENSE) for details.
 ## Links
 
 <!-- - [Documentation](https://docs.osintbuddy.com/) -->
+
 - [OSINTBuddy Application](https://github.com/osintbuddy/osintbuddy)
 - [Issue Tracker](https://github.com/osintbuddy/osintbuddy/issues)
