@@ -1,102 +1,109 @@
-from typing import List, Any
+"""Input elements for OSINTBuddy plugins.
+
+Input elements capture user data in entity forms.
+"""
+from __future__ import annotations
+
+from typing import Any
 from osintbuddy.elements.base import BaseInput
 
 
 class UploadFileInput(BaseInput):
+    """File upload input element.
+
+    Attributes:
+        icon: Icon identifier for the element.
+
+    Example:
+        UploadFileInput(label="Upload Document", icon="file-upload")
+    """
     element_type: str = "upload"
 
-    def __init__(self, value="", default="", icon="IconAlphabetLatin", **kwargs):
+    def __init__(self, value: str = "", icon: str = "IconAlphabetLatin", **kwargs):
         super().__init__(**kwargs)
         self.element = {
             "icon": icon
         }
-    def to_dict(self):
+
+    def to_dict(self) -> dict[str, Any]:
         return self._base_entity_element(**self.element)
 
 
-
 class TextInput(BaseInput):
-    """The TextInput class represents a text input node used
-    in the OsintBuddy plugin system.
-    value : str
-        The value stored in the element.
-    icon : str
-        The icon to be displayed with the input element.
-    default : str
-        The default value for the input element.
+    """Single-line text input element.
 
-    Usage Example:
-    class Plugin(OBPlugin):
-        node = [TextInput(label='Email search', placeholder='Enter email')]
+    Attributes:
+        value: The current value of the input.
+        icon: Icon identifier for the element.
+        placeholder: Placeholder text shown when empty.
+
+    Example:
+        TextInput(label="Email", icon="mail", field_type=FieldType.EMAIL)
     """
     element_type: str = "text"
 
-    def __init__(self, value="", default="", icon="IconAlphabetLatin", **kwargs):
+    def __init__(self, value: str = "", icon: str = "IconAlphabetLatin", **kwargs):
         super().__init__(**kwargs)
         self.element = {
             "value": value,
             "icon": icon
         }
-    def to_dict(self):
+
+    def to_dict(self) -> dict[str, Any]:
         return self._base_entity_element(**self.element)
 
 
 class TextAreaInput(BaseInput):
-    """The TextInput class represents a text input node used
-    in the OsintBuddy plugin system.
-    value : str
-        The value stored in the element.
-    icon : str
-        The icon to be displayed with the input element.
-    default : str
-        The default value for the input element.
+    """Multi-line text area input element.
 
-    Usage Example:
-    class Plugin(OBPlugin):
-        node = [TextInput(label='Email search', placeholder='Enter email')]
+    Attributes:
+        value: The current value of the textarea.
+
+    Example:
+        TextAreaInput(label="Notes", field_type=FieldType.NOTES)
     """
     element_type: str = "textarea"
 
-    def __init__(self, value="", **kwargs):
+    def __init__(self, value: str = "", **kwargs):
         super().__init__(**kwargs)
         self.element = {
             "value": value,
         }
-    def to_dict(self):
+
+    def to_dict(self) -> dict[str, Any]:
         return self._base_entity_element(**self.element)
 
 
 class DropdownInput(BaseInput):
-    """
-    The DropdownInput class represents a dropdown menu node used
-    in the OsintBuddy plugin system.
-    options : List[any]
-        A list of options for the dropdown menu.
-    value : str
-        The initially selected option in the dropdown menu.
+    """Dropdown selection input element.
 
-    Usage Example:
-    class Plugin(OBPlugin):
-        node = [
-            DropdownInput(
-                options=[{'label': 'Option 1', 'tooltip': 'Hello on hover!'}],
-                value='Option 1'
-            )
-        ]
+    Attributes:
+        options: List of option dictionaries with 'label' and optional 'tooltip'.
+        value: The currently selected option.
+
+    Example:
+        DropdownInput(
+            label="Category",
+            options=[
+                {'label': 'Personal', 'tooltip': 'Personal accounts'},
+                {'label': 'Business'}
+            ],
+            value={'label': 'Personal'}
+        )
     """
     element_type: str = "dropdown"
 
-    def __init__(self, options=[], value={'label': '', 'tooltip': '', 'value': ''}, **kwargs):
+    def __init__(
+        self,
+        options: list[dict[str, Any]] | None = None,
+        value: dict[str, Any] | None = None,
+        **kwargs
+    ):
         super().__init__(**kwargs)
         self.element = {
-            "options": options,
-            "value": value
+            "options": options or [],
+            "value": value or {'label': '', 'tooltip': '', 'value': ''}
         }
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         return self._base_entity_element(**self.element)
-
-
-
-class NumberInput(BaseInput):
-    ...

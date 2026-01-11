@@ -1,6 +1,8 @@
+import json
 import re
 import unicodedata
-from typing import List, Union
+from pathlib import Path
+from typing import Any, List, Union
 from urllib import parse
 from pydantic import EmailStr
 
@@ -12,6 +14,40 @@ from selenium.webdriver.chrome.webdriver import WebDriver
 
 
 MAP_KEY = '___obmap___'
+
+
+def resolve_resource_path(module_file: str, *parts: str) -> Path:
+    """Resolve a resource path relative to a module file."""
+    return Path(module_file).resolve().parent.joinpath(*parts)
+
+
+def read_resource_text(
+    module_file: str,
+    *parts: str,
+    default: str | None = None,
+    encoding: str = "utf-8",
+) -> str | None:
+    """Read a text resource relative to a module file."""
+    path = resolve_resource_path(module_file, *parts)
+    try:
+        return path.read_text(encoding=encoding)
+    except (FileNotFoundError, OSError):
+        return default
+
+
+def read_resource_json(
+    module_file: str,
+    *parts: str,
+    default: Any = None,
+) -> Any:
+    """Read a JSON resource relative to a module file."""
+    payload = read_resource_text(module_file, *parts, default=None)
+    if payload is None:
+        return default
+    try:
+        return json.loads(payload)
+    except json.JSONDecodeError:
+        return default
 
 
 @contextmanager

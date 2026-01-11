@@ -16,6 +16,5 @@ from osintbuddy.elements.inputs import (  # noqa
     UploadFileInput,
     TextInput,
     DropdownInput,
-    NumberInput,
     TextAreaInput
 )
