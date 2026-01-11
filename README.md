@@ -32,7 +32,7 @@ OSINTBuddy's plugin system enables you to define **entities** (_nodes in the gra
 ## Installation
 
 ```bash
-pip install osintbuddy
+pip install osintbuddy[all]
 ```
 
 For development:
