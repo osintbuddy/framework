@@ -4,12 +4,10 @@ This guide walks you through installing OSINTBuddy, setting up a plugin project,
 
 ## Prerequisites
 
-- Python 3.12+
-- pip
+- `Python 3.12+`
+- `pip`
 
-## Installation
-
-### From PyPI
+## Installation from PyPI
 
 ```bash
 pip install osintbuddy
@@ -46,7 +44,7 @@ my-osint-plugins/
 │   ├── __init__.py
 │   ├── email_transforms.py
 │   └── domain_transforms.py
-└── __init__.py
+└── manifest.json
 ```
 
 The framework expects:
@@ -107,15 +105,8 @@ class EmailEntity(Plugin):
 Create `transforms/email_transforms.py`:
 
 ```python
-from osintbuddy import transform, Entity, Edge
+from osintbuddy import transform, Entity, Edge, Registry
 from entities.email import EmailEntity
-
-
-# Import your target entity - this would be defined elsewhere
-class DomainEntity(Plugin):
-    version = "1.0.0"
-    label = "Domain"
-    elements = [TextInput(label="Domain", field_type=FieldType.DOMAIN)]
 
 
 @transform(
@@ -124,6 +115,7 @@ class DomainEntity(Plugin):
     icon="world",
 )
 async def extract_domain(entity):
+    DomainEntity = await Registry.get_entity('domain@1.0.0')
     """Extract the domain from an email address."""
     email = entity.email  # Access fields via snake_case attribute
 
@@ -147,18 +139,7 @@ async def extract_domain(entity):
 - **async**: All transforms must be async functions
 - **entity**: A `TransformPayload` with field access via snake_case attributes
 
-## Loading Your Plugins
-
-Use `load_plugins_fs` to load your plugins:
-
-```python
-from osintbuddy import load_plugins_fs
-
-# Load from a directory
-load_plugins_fs("/path/to/my-osint-plugins", "my_plugins")
-```
-
-Or use the CLI with the `-P` flag:
+Use the CLI with the `-P` flag:
 
 ```bash
 ob entities -P /path/to/my-osint-plugins
@@ -182,8 +163,6 @@ class ExamplePlugin(Plugin):
 ```
 
 ## Running Transforms
-
-### Via CLI
 
 ```bash
 ob transform '{
@@ -227,7 +206,7 @@ return Entity(
 )
 ```
 
-### Complex Subgraph
+### Subgraph
 
 ```python
 return Subgraph(
@@ -239,14 +218,6 @@ return Subgraph(
         ("node1_id", "node2_id", Edge(label="connects")),
     ],
 )
-```
-
-### Backwards Compatibility
-
-Plain dictionaries still work for simple cases:
-
-```python
-return TargetEntity.blueprint(field="value")  # Legacy format
 ```
 
 ## Error Handling

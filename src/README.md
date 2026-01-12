@@ -38,7 +38,7 @@ pip install osintbuddy[all]
 For development:
 
 ```bash
-git clone https://github.com/osintbuddy/plugins.git
+git clone https://github.com/osintbuddy/framework.git
 cd plugins/
 pip install -e ".[dev]"
 ```
@@ -89,7 +89,7 @@ async def extract_domain(entity):
 ### Run a Transform
 
 ```bash
-ob run -T '{"label": "email", "version": "1.0.0", "transform": "extract_domain", "data": {"email": "user@example.com"}}'
+ob transform '{"label": "email", "version": "1.0.0", "transform": "extract_domain", "data": {"email": "user@example.com"}}'
 ```
 
 ## Documentation
@@ -182,10 +182,6 @@ ob blueprints -L email
 ob compile entity.json -O entity.py
 ```
 
-## Requirements
-
-- Python 3.12+
-
 ## License
 
 MIT License, see [LICENSE](LICENSE) for details.
@@ -193,5 +189,6 @@ MIT License, see [LICENSE](LICENSE) for details.
 ## Links
 
 <!-- - [Documentation](https://docs.osintbuddy.com/) -->
+
 - [OSINTBuddy Application](https://github.com/osintbuddy/osintbuddy)
 - [Issue Tracker](https://github.com/osintbuddy/osintbuddy/issues)

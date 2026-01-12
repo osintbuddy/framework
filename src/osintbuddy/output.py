@@ -47,9 +47,10 @@ def emit_result(data: Any) -> None:
     Args:
         data: Data to serialize and emit
     """
-    print(JSON_START, file=sys.stderr)
+    print(JSON_START, file=sys.stdout)
     json.dump(data, sys.stdout)
-    print(f"\n{JSON_END}", file=sys.stderr)
+    print(f"\n{JSON_END}", file=sys.stdout)
+    sys.stdout.flush()
 
 
 def emit_error(error: str, code: str = "UNKNOWN", details: dict[str, Any] | None = None) -> None:
@@ -67,9 +68,10 @@ def emit_error(error: str, code: str = "UNKNOWN", details: dict[str, Any] | None
     if details:
         error_data["details"] = details
 
-    print(ERROR_START, file=sys.stderr)
+    print(ERROR_START, file=sys.stdout)
     json.dump(error_data, sys.stdout)
-    print(f"\n{ERROR_END}", file=sys.stderr)
+    print(f"\n{ERROR_END}", file=sys.stdout)
+    sys.stdout.flush()
 
 
 def emit_progress(message: str, percent: int = -1, stage: str = "") -> None:
