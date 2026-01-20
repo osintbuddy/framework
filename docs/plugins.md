@@ -53,7 +53,7 @@ class PersonEntity(Plugin):
 | `author`      | `str \| list[str]` | `""`           | Plugin author(s)                   |
 | `icon`        | `str`              | `"atom-2"`     | Icon identifier                    |
 | `color`       | `str`              | `"#145070"`    | Hex color code                     |
-| `category`    | `str`              | `""`           | UI grouping category               |
+| `category`    | `str \| list[str]` | `""`           | UI grouping category/categories    |
 | `tags`        | `list[str]`        | `[]`           | Searchable tags                    |
 | `show_in_ui`  | `bool`             | `True`         | Show in entity picker dialog       |
 | `deps`        | `list[str]`        | `[]`           | Plugin-level Python dependencies   |

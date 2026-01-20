@@ -280,7 +280,7 @@ class Plugin(object, metaclass=Registry):
     color: str = '#145070'
 
     # Organization
-    category: str = ''
+    category: str | list[str] = ''
     tags: list[str] = []
 
     # UI visibility

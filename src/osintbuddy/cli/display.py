@@ -145,9 +145,14 @@ def print_entities_table(entities: list[dict]) -> None:
             author = ", ".join(author)
         description = entity.get("description", "") or ""
         desc_display = description[:50] + "..." if len(description) > 50 else (description or "-")
+        category = entity.get("category", "-")
+        if isinstance(category, list):
+            category_display = ", ".join(str(cat) for cat in category if cat) or "-"
+        else:
+            category_display = category or "-"
         table.add_row(
             entity.get("label", "unknown"),
-            entity.get("category", "-") or "-",
+            category_display,
             author or "unknown",
             desc_display,
         )

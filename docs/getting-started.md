@@ -95,7 +95,7 @@ class EmailEntity(Plugin):
 | `elements`    | Yes      | Form fields for the entity                       |
 | `icon`        | No       | Icon identifier (default: "atom-2")              |
 | `color`       | No       | Hex color (default: "#145070")                   |
-| `category`    | No       | UI grouping category                             |
+| `category`    | No       | UI grouping category/categories                  |
 | `description` | No       | Long description                                 |
 | `tags`        | No       | Searchable tags                                  |
 | `show_in_ui`  | No       | Whether to show in entity picker (default: true) |

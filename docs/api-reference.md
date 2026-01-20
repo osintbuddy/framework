@@ -21,7 +21,7 @@ class MyEntity(Plugin):
     author: str | list[str] = ""    # Author(s)
     icon: str = "atom-2"            # Icon identifier
     color: str = "#145070"          # Hex color
-    category: str = ""              # UI grouping
+    category: str | list[str] = ""  # UI grouping (single or multiple categories)
     tags: list[str] = []            # Searchable tags
     show_in_ui: bool = True         # Show in entity picker
     deps: list[str] = []            # Python dependencies
