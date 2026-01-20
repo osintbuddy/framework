@@ -95,6 +95,7 @@ from osintbuddy.output import (
     emit_progress,
     emit_json,
     ProgressEmitter,
+    ProgressEvent,
 )
 
 # Error types
@@ -166,6 +167,7 @@ __all__ = [
     "emit_progress",
     "emit_json",
     "ProgressEmitter",
+    "ProgressEvent",
     # Errors
     "PluginError",
     "PluginWarn",

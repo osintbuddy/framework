@@ -22,7 +22,7 @@ from packaging.specifiers import SpecifierSet, InvalidSpecifier
 from collections import defaultdict
 from collections.abc import Callable, Awaitable
 from pydantic import BaseModel, ConfigDict
-
+from uuid import uuid4
 from osintbuddy.elements.base import BaseElement
 from osintbuddy.errors import PluginError, ErrorCode
 from osintbuddy.utils import to_snake_case
@@ -340,6 +340,7 @@ class Plugin(object, metaclass=Registry):
             Dict with label, color, icon, elements, and metadata
         """
         metaentity: dict[str, Any] = {
+            'id': str(uuid4()),
             'label': cls.label,
             'color': cls.color,
             'icon': cls.icon,
@@ -603,13 +604,32 @@ def transform(
     entity_version = target_parts[1]
 
     def decorator_transform(func: Callable) -> Callable:
-        @functools.wraps(func)
-        async def wrapper(entity: Any, **kwargs: Any) -> Any:
-            # Install dependencies if specified
-            if deps:
-                from osintbuddy.deps import ensure_deps
-                ensure_deps(tuple(deps))
-            return await func(entity=entity, **kwargs)
+        if inspect.isasyncgenfunction(func):
+            @functools.wraps(func)
+            async def wrapper(entity: Any, **kwargs: Any) -> Any:
+                # Install dependencies if specified
+                if deps:
+                    from osintbuddy.deps import ensure_deps
+                    ensure_deps(tuple(deps))
+                async for item in func(entity=entity, **kwargs):
+                    yield item
+        elif inspect.isgeneratorfunction(func):
+            @functools.wraps(func)
+            def wrapper(entity: Any, **kwargs: Any) -> Any:
+                if deps:
+                    from osintbuddy.deps import ensure_deps
+                    ensure_deps(tuple(deps))
+                yield from func(entity=entity, **kwargs)
+        else:
+            @functools.wraps(func)
+            async def wrapper(entity: Any, **kwargs: Any) -> Any:
+                # Install dependencies if specified
+                if deps:
+                    from osintbuddy.deps import ensure_deps
+                    ensure_deps(tuple(deps))
+                if inspect.iscoroutinefunction(func):
+                    return await func(entity=entity, **kwargs)
+                return func(entity=entity, **kwargs)
 
         # Attach metadata to wrapper
         wrapper.label = label

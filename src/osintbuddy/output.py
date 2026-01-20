@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import json
 import sys
+from dataclasses import dataclass
 from typing import Any, Callable
 
 
@@ -96,6 +97,21 @@ def emit_progress(message: str, percent: int = -1, stage: str = "") -> None:
             pass
 
     print(f"{PROGRESS_PREFIX}{json.dumps(progress_data)}", file=sys.stderr)
+
+
+@dataclass
+class ProgressEvent:
+    """Structured progress event for streaming transforms."""
+
+    message: str
+    percent: int = -1
+    stage: str = ""
+
+    def to_payload(self) -> dict[str, Any]:
+        payload = {"message": self.message, "percent": self.percent}
+        if self.stage:
+            payload["stage"] = self.stage
+        return payload
 
 
 def emit_json(data: Any, pretty: bool = False) -> None:

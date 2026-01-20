@@ -18,7 +18,7 @@ from typing import Any, AsyncIterator, Iterator
 from osintbuddy import Registry, load_plugins_fs
 from osintbuddy.plugins import TransformPayload
 from osintbuddy.results import normalize_result
-from osintbuddy.output import set_progress_callback
+from osintbuddy.output import ProgressEvent, set_progress_callback
 from osintbuddy.utils import to_snake_case
 from osintbuddy.errors import PluginError, ErrorCode
 
@@ -278,7 +278,7 @@ class ObWorker:
         if "cfg" in sig.parameters:
             kwargs["cfg"] = cfg_obj
 
-        if inspect.isasyncgenfunction(transform_fn):
+        if inspect.isasyncgenfunction(transform_fn) or inspect.isgeneratorfunction(transform_fn):
             try:
                 result = transform_fn(self=plugin_instance, entity=entity_arg, **kwargs)
             except TypeError:
@@ -324,6 +324,41 @@ async def _send_transform_events(
             }
         )
 
+    def _extract_progress(value: Any) -> dict[str, Any] | None:
+        if isinstance(value, ProgressEvent):
+            return value.to_payload()
+        if isinstance(value, dict) and value.get("_type") == "progress":
+            return {k: v for k, v in value.items() if k != "_type"}
+        return None
+
+    def _emit_result_chunk(chunk: Any, edge_label: str) -> None:
+        nonlocal count
+        if isinstance(chunk, (list, tuple)):
+            progress_payloads: list[dict[str, Any]] = []
+            results: list[Any] = []
+            for item in chunk:
+                progress = _extract_progress(item)
+                if progress is not None:
+                    progress_payloads.append(progress)
+                else:
+                    results.append(item)
+            for payload in progress_payloads:
+                emit("progress", payload)
+            if results:
+                normalized = normalize_result(results, default_edge_label=edge_label)
+                count += len(normalized)
+                emit("result", normalized)
+            return
+
+        progress = _extract_progress(chunk)
+        if progress is not None:
+            emit("progress", progress)
+            return
+
+        normalized = normalize_result(chunk, default_edge_label=edge_label)
+        count += len(normalized)
+        emit("result", normalized)
+
     def on_progress(progress: dict[str, Any]) -> None:
         emit("progress", progress)
 
@@ -340,18 +375,12 @@ async def _send_transform_events(
         if stream is not None:
             if inspect.isasyncgen(stream) or hasattr(stream, "__aiter__"):
                 async for chunk in stream:  # type: ignore[misc]
-                    normalized = normalize_result(chunk, default_edge_label=edge_label)
-                    count += len(normalized)
-                    emit("result", normalized)
+                    _emit_result_chunk(chunk, edge_label)
             else:
                 for chunk in stream:  # type: ignore[assignment]
-                    normalized = normalize_result(chunk, default_edge_label=edge_label)
-                    count += len(normalized)
-                    emit("result", normalized)
+                    _emit_result_chunk(chunk, edge_label)
         else:
-            normalized = normalize_result(result, default_edge_label=edge_label)
-            count = len(normalized)
-            emit("result", normalized)
+            _emit_result_chunk(result, edge_label)
 
         emit("done", {"count": count})
     finally:
