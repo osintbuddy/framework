@@ -4,18 +4,17 @@ on:
     branches: [main]
 
 jobs:
-  publish:
+  # https://github.com/pypa/gh-action-pypi-publish
+  pypi-publish:
+    name: Upload release to PyPI
     runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/osintbuddy
     permissions:
-      id-token: write
+      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
     steps:
-      - uses: actions/checkout@v4
+    # retrieve your distributions here
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - run: python -m pip install --upgrade pip build
-      - run: python -m build
-
-      - uses: pypa/gh-actions-pypi-publish@release/v1
+    - name: Publish package distributions to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
