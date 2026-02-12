@@ -6,17 +6,16 @@ on:
 jobs:
   # https://github.com/pypa/gh-action-pypi-publish
   build:
-  runs-on: ubuntu-latest
-  steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-python@v5
-      with: { python-version: "3.12" }
-    - run: python -m pip install -U pip build && python -m build
-    - uses: actions/upload-artifact@v4
-      with:
-        name: dist
-        path: dist/*
-
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: python -m pip install -U pip build && python -m build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/*
   publish:
     needs: build
     runs-on: ubuntu-latest
