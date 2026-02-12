@@ -21,15 +21,6 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
-    "Topic :: Security",
-    "Topic :: Security :: Cryptography",
-    "Topic :: Security :: Information Analysis",
-    "Topic :: Internet :: WWW/HTTP",
-    "Topic :: Software Development :: Libraries",
-    "Topic :: Software Development :: Libraries :: Application Frameworks",
-    "Topic :: Software Development :: Libraries :: Python Modules",
-    "Typing :: Typed",
-    "Topic :: Scientific/Engineering :: Information Analysis",
 ]
 keywords = ["osint", "open-source-intelligence", "transform-pipeline", "intelligence", "plugins", "graph", "crawl", "crawling", "web", "scraping", "security", "reconnaissance","enrichment", "entity", "analysis", "investigation", "threat", "attribution", "cti", "threat-hunting", "recon", "attack-surface", "entity-resolution", "knowledge-graph", "plugin-framework", "extensible", "python-plugins", "investigative-journalism", "research-tools", "digital-investigations",  "provenance", "compliance", "local-first", "offline", "browser-automation", "maltego"]
 requires-python = ">=3.12"
