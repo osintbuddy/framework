@@ -2,10 +2,22 @@ name: PyPi Publish Workflow
 on:
   workflow_call:
   workflow_dispatch:
+    tags:
+      - "v*"
 
 jobs:
   publish:
-    uses: microsoft/action-python/.github/workflows/publish.yml@0.2.0
-    secrets:
-      PYPI_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-      TEST_PYPI_PASSWORD: ${{ secrets.TEST_PYPI_PASSWORD  }}
+  runs-on: ubuntu-latest
+  permissions:
+    id-token: write
+  steps:
+    - uses: actions/checkout@v4
+
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    - run: python -m pip install --upgrade pip build
+    - run: python -m build
+
+    - uses: pypa/gh-actions-pypi-publish@release/v1
