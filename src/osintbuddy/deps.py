@@ -17,10 +17,16 @@ Example usage:
 from __future__ import annotations
 
 import subprocess
-import sys
 import logging
+import importlib
 from functools import lru_cache
 from typing import Sequence
+
+from osintbuddy.runtime import (
+    ensure_playwright_browsers,
+    ensure_runtime_ready,
+    install_python_packages,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +68,7 @@ def is_package_installed(package_name: str) -> bool:
         True if the package can be imported
     """
     try:
+        ensure_runtime_ready()
         __import__(package_name)
         return True
     except ImportError:
@@ -84,15 +91,11 @@ def install_packages(packages: Sequence[str], quiet: bool = True) -> bool:
     if not packages:
         return True
 
-    cmd = [sys.executable, "-m", "pip", "install"]
-    if quiet:
-        cmd.append("--quiet")
-    cmd.extend(packages)
-
     try:
-        subprocess.check_call(cmd, stdout=subprocess.DEVNULL if quiet else None)
+        install_python_packages(packages, quiet=quiet)
+        ensure_playwright_browsers([parse_package_name(dep) for dep in packages])
         return True
-    except subprocess.CalledProcessError as e:
+    except (subprocess.CalledProcessError, RuntimeError) as e:
         raise DependencyError(f"Failed to install packages {packages}: {e}")
 
 
@@ -129,6 +132,7 @@ def ensure_deps(deps: tuple[str, ...], auto_install: bool = True) -> bool:
             missing.append(dep)
 
     if not missing:
+        ensure_playwright_browsers([parse_package_name(dep) for dep in deps])
         return True
 
     if not auto_install:
@@ -139,6 +143,8 @@ def ensure_deps(deps: tuple[str, ...], auto_install: bool = True) -> bool:
 
     logger.info(f"Installing missing dependencies: {missing}")
     install_packages(missing)
+    importlib.invalidate_caches()
+    ensure_runtime_ready()
 
     # Verify installation
     still_missing = []
