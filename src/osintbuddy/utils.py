@@ -6,11 +6,11 @@ from typing import Any, List, Union
 from urllib import parse
 from pydantic import EmailStr
 
-from typing import Generator
+from typing import Generator, TYPE_CHECKING
 from contextlib import contextmanager
 
-from selenium import webdriver
-from selenium.webdriver.chrome.webdriver import WebDriver
+if TYPE_CHECKING:
+    from selenium.webdriver.chrome.webdriver import WebDriver
 
 
 MAP_KEY = '___obmap___'
@@ -51,11 +51,13 @@ def read_resource_json(
 
 
 @contextmanager
-def get_driver() -> Generator[WebDriver, None, None]:
+def get_driver() -> Generator["WebDriver", None, None]:
     """
     Obtains a Selenium web driver instance that can be used to automate interactions with a Chrome web browser.
     The driver is properly closed when it is no longer needed.
     """
+    from selenium import webdriver
+
     options = webdriver.ChromeOptions()
     options.binary_location = "/usr/bin/chromium"
     # prevent issues that may arise when running Chrome in a Docker container
@@ -63,7 +65,7 @@ def get_driver() -> Generator[WebDriver, None, None]:
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--headless")
 
-    driver: WebDriver = webdriver.Chrome(
+    driver: "WebDriver" = webdriver.Chrome(
         options=options,
         # desired_capabilities=DesiredCapabilities.CHROME,
     )
@@ -142,7 +144,7 @@ def to_snake_case(name):
 # Convert all keys in dict to snake_case
 def dkeys_to_snake_case(data: dict) -> Union[dict, List[dict]]:
     def to_snake(s):
-        return re.sub('([A-Z]\w+$)', '_\\1', s).lower()
+        return re.sub(r'([A-Z]\w+$)', r'_\1', s).lower()
 
     if isinstance(data, list):
         return [dkeys_to_snake_case(i) if isinstance(i, (dict, list)) else i for i in data]
