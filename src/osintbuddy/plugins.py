@@ -36,6 +36,62 @@ if TYPE_CHECKING:
 
 E = NewType('E', BaseElement)
 
+_MODULE_TO_PACKAGE_MAP = {
+    "PIL": "pillow",
+    "bs4": "beautifulsoup4",
+    "cv2": "opencv-python",
+    "yaml": "pyyaml",
+}
+
+
+def _package_name_for_module(module_name: str) -> str | None:
+    if not module_name:
+        return None
+    top_level = module_name.split(".", 1)[0]
+    return _MODULE_TO_PACKAGE_MAP.get(top_level, top_level)
+
+
+def _purge_module_tree(module_name: str) -> None:
+    if not module_name:
+        return
+    top_level = module_name.split(".", 1)[0]
+    prefixes = (f"{top_level}.",)
+    for loaded_name in list(sys.modules):
+        if loaded_name == top_level or loaded_name.startswith(prefixes):
+            sys.modules.pop(loaded_name, None)
+
+
+def _exec_module_with_auto_install(
+    spec: importlib.machinery.ModuleSpec,
+    module_name: str,
+    configure_module: Callable[[Any], None] | None = None,
+) -> Any:
+    def build_module() -> Any:
+        module = importlib.util.module_from_spec(spec)
+        if configure_module is not None:
+            configure_module(module)
+        sys.modules[module_name] = module
+        return module
+
+    module = build_module()
+    try:
+        spec.loader.exec_module(module)
+        return module
+    except ModuleNotFoundError as exc:
+        package_name = _package_name_for_module(exc.name or "")
+        if not package_name:
+            raise
+
+        from osintbuddy.deps import install_packages
+
+        install_packages([package_name], quiet=False)
+        _purge_module_tree(exc.name or "")
+        sys.modules.pop(module_name, None)
+
+        module = build_module()
+        spec.loader.exec_module(module)
+        return module
+
 
 class TransformPayload(BaseModel):
     """Payload passed to transform functions.
@@ -507,17 +563,26 @@ def load_plugins_fs(plugins_path: str = "plugins", package: str = "osintbuddy.tr
     Returns:
         Dict of loaded plugins (entity_id -> Plugin class)
     """
-    entity_files = glob.glob(f'{plugins_path}/entities/*.py')
-    transform_scripts = glob.glob(f'{plugins_path}/transforms/*.py')
+    roots = [plugins_path]
+    try:
+        for entry in os.scandir(plugins_path):
+            if entry.is_dir():
+                roots.append(entry.path)
+    except FileNotFoundError:
+        roots = [plugins_path]
+
+    entity_files: list[str] = []
+    transform_scripts: list[str] = []
+    for root in roots:
+        entity_files.extend(glob.glob(f'{root}/entities/*.py'))
+        transform_scripts.extend(glob.glob(f'{root}/transforms/*.py'))
 
     # Load entity plugins
     for entity_path in entity_files:
         mod_name = entity_path.replace('.py', '').replace('plugins/', '').replace('entities/', '')
         spec = importlib.util.spec_from_file_location(mod_name, entity_path)
         if spec is not None and spec.loader is not None:
-            module = importlib.util.module_from_spec(spec)
-            sys.modules[mod_name] = module
-            spec.loader.exec_module(module)
+            module = _exec_module_with_auto_install(spec, mod_name)
 
             # Install plugin-level deps and register transforms
             for name in dir(module):
@@ -539,10 +604,11 @@ def load_plugins_fs(plugins_path: str = "plugins", package: str = "osintbuddy.tr
         script_mod_name = f"plugins.transforms.{base}"
         spec = importlib.util.spec_from_file_location(script_mod_name, script)
         if spec is not None and spec.loader is not None:
-            module = importlib.util.module_from_spec(spec)
-            module.__package__ = "plugins.transforms"
-            sys.modules[script_mod_name] = module
-            spec.loader.exec_module(module)
+            module = _exec_module_with_auto_install(
+                spec,
+                script_mod_name,
+                configure_module=lambda module: setattr(module, "__package__", "plugins.transforms"),
+            )
 
             # Register transforms found in the module
             for name in dir(module):
