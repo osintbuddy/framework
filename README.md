@@ -178,6 +178,12 @@ ob transform '{"label": "email", "version": "1.0.0", "transform": "to_domain", "
 # Get entity blueprints
 ob blueprints -L email
 
+# Generate marketplace metadata
+ob init
+
+# Sync manifest and README metadata after repo changes
+ob sync
+
 # Compile JSON entity to Python
 ob compile entity.json -O entity.py
 ```
