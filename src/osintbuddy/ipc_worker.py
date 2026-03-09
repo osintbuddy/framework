@@ -19,8 +19,11 @@ from osintbuddy import Registry, load_plugins_fs
 from osintbuddy.plugins import TransformPayload
 from osintbuddy.results import normalize_result
 from osintbuddy.output import ProgressEvent, set_progress_callback
+from osintbuddy.runtime import ensure_runtime_ready
 from osintbuddy.utils import to_snake_case
 from osintbuddy.errors import PluginError, ErrorCode
+
+ensure_runtime_ready()
 
 
 def _default_plugins_path() -> str:
