@@ -7,23 +7,31 @@ name = "osintbuddy"
 authors = [
     {name = "jerlendds", email = "jerlendds@osintbuddy.com"},
 ]
-description = "OSINTBuddy - The OSINTBuddy application framework for graph-based information analysis and offline local-first investigative workflows."
+description = "The OSINTBuddy plugins framework for graph-based information analysis and offline local-first investigative workflows."
 readme = "README.md"
 license = {text = "MIT"}
 classifiers = [
-    "Development Status :: 4 - Beta",
     "Framework :: AsyncIO",
-    "Framework :: FastAPI",
+    "Environment :: Console",
+    "Natural Language :: English",
+    "Topic :: Software Development",
     "Intended Audience :: Developers",
-    "Intended Audience :: Information Technology",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "License :: OSI Approved :: MIT License",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Scientific/Engineering :: Information Analysis", 
+    "Topic :: Security",
+    "Topic :: System :: Archiving", 
+    "Topic :: System :: Networking :: Monitoring", 
+    "Topic :: Utilities"
 ]
-keywords = ["osint", "open-source-intelligence", "transform-pipeline", "intelligence", "plugins", "graph", "crawl", "crawling", "web", "scraping", "security", "reconnaissance","enrichment", "entity", "analysis", "investigation", "threat", "attribution", "cti", "threat-hunting", "recon", "attack-surface", "entity-resolution", "knowledge-graph", "plugin-framework", "extensible", "python-plugins", "investigative-journalism", "research-tools", "digital-investigations",  "provenance", "compliance", "local-first", "offline", "browser-automation", "maltego"]
-requires-python = ">=3.12"
+keywords = ["osint", "open source intelligence", "transform-pipeline", "intelligence", "plugins", "graph", "crawl", "crawling", "web", "scraping", "security", "reconnaissance","enrichment", "entity", "analysis", "investigation", "threat", "attribution", "cti", "threat-hunting", "recon", "attack-surface", "entity-resolution", "knowledge-graph", "plugin-framework", "extensible", "python-plugins", "investigative-journalism", "research-tools", "digital-investigations",  "provenance", "compliance", "local-first", "offline", "browser-automation", "maltego"]
+requires-python = ">=3.13"
 dynamic = ["version"]
 
 dependencies = [
@@ -32,6 +40,7 @@ dependencies = [
     "httpx[http2]>=0.28.1",
     "beautifulsoup4>=4.14.3",
     "rich>=14.2.0",
+    "dulwich>=1.1.0",
 ]
 
 [project.optional-dependencies]
@@ -48,6 +57,25 @@ dev = [
 all = [
     "selenium>=4.39.0",
     "playwright>=1.57.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "ruff>=0.14.11",
+    "mypy>=1.19.0",
+    "black>=25.12.0",
+    "pytest-cov>=7.0.0",
+    "selenium>=4.39.0",
+    "playwright>=1.57.0",
+    "pydantic>=2.12.5",
+    "packaging>=21.0",
+    "httpx[http2]>=0.28.1",
+    "beautifulsoup4>=4.14.3",
+    "rich>=14.2.0",
+    "dulwich>=1.1.0",
+    "pyinstaller>=6.19.0",
 ]
 
 [project.urls]
@@ -118,7 +146,7 @@ exclude = [
     "**/node_modules",
     "**/__pycache__",
 ]
-pythonVersion = "3.11"
+pythonVersion = "3.13"
 pythonPlatform = "Linux"
 typeCheckingMode = "basic"
 reportMissingImports = true
@@ -129,3 +157,4 @@ reportMissingTypeStubs = false
 
 [tool.hatch.build.targets.wheel.force-include]
 "bin/ob.py" = "osintbuddy/ob.py"
+
