@@ -5,7 +5,8 @@ This script contains the commands needed to manage an OSINTBuddy Plugins service
 
 Commands:
     ob start                    Start the FastAPI microservice
-    ob init                     Load initial osintbuddy entities
+    ob init                     Generate manifest.json and README.md for a plugin repo
+    ob sync                     Regenerate manifest.json and sync README metadata
     ob transform <payload>      Run a transform
     ob entities                 List all entities
     ob transforms -L <label>    List transforms for an entity
@@ -38,6 +39,16 @@ from osintbuddy.utils import to_snake_case
 from osintbuddy.results import normalize_result
 from osintbuddy.output import emit_result, emit_error, emit_progress, emit_json
 from osintbuddy.errors import PluginError, ErrorCode
+from osintbuddy.repo_inspector import (
+    ensure_local_git_repo,
+    inspect_repo,
+    load_existing_manifest,
+    resolve_plugins_root,
+    scaffold_default_repo_files,
+    sync_readme,
+    write_manifest,
+    write_readme,
+)
 from osintbuddy.cli.console import console, err_console, OSIB_THEME
 from osintbuddy.cli.display import (
     print_banner,
@@ -567,8 +578,143 @@ def compile_directory_cmd(
             print(f"  - {name}")
 
 
+def _confirm_action(prompt: str, interactive: bool) -> bool:
+    """Ask the user to confirm a potentially destructive action."""
+    if not interactive:
+        return False
+
+    while True:
+        response = input(prompt).strip().lower()
+        if response in {"y", "yes"}:
+            return True
+        if response in {"n", "no"}:
+            return False
+        print_info("Please answer y or n.")
+
+
+def _has_existing_plugins(plugins_root: Path) -> bool:
+    """Check whether the repo already contains entity/transform plugin files."""
+    for directory in (plugins_root / "entities", plugins_root / "transforms"):
+        if not directory.is_dir():
+            continue
+        if any(path.suffix == ".py" for path in directory.iterdir() if path.is_file()):
+            return True
+    return False
+
+
+def init_cmd(
+    plugins_path: str | None = None,
+    output_path: str | None = None,
+    interactive: bool = True,
+) -> dict[str, object]:
+    """Generate manifest.json and README.md for a plugin repository."""
+    plugins_root = resolve_plugins_root(plugins_path)
+    repo_root = plugins_root
+    initialized_repo = ensure_local_git_repo(repo_root)
+    manifest_path = Path(output_path).expanduser().resolve() if output_path else repo_root / "manifest.json"
+    readme_path = repo_root / "README.md"
+
+    should_scaffold = True
+    if _has_existing_plugins(plugins_root):
+        should_scaffold = _confirm_action(
+            "Existing plugins detected. `ob sync` is safer for updates. Would you like generic example entities and a generic transform created anyway? (y/n) ",
+            interactive,
+        )
+        if not should_scaffold and interactive:
+            print_info("Skipping example entity/transform scaffolding!")
+
+    created_files = scaffold_default_repo_files(plugins_root, repo_root=repo_root) if should_scaffold else []
+    snapshot = inspect_repo(plugins_path=plugins_path, include_hashes=True, repo_root=repo_root)
+    manifest_destination = None
+    manifest = None
+    readme_destination = None
+
+    should_write_manifest = True
+    if manifest_path.exists():
+        should_write_manifest = _confirm_action(
+            "Existing manifest.json detected. `ob sync` is safer for updates. Would you like to overwrite it anyway? (y/n) ",
+            interactive,
+        )
+        if not should_write_manifest and interactive:
+            print_info("Skipping manifest.json overwrite")
+
+    should_write_readme = True
+    if readme_path.exists():
+        should_write_readme = _confirm_action(
+            "Existing README.md detected. `ob sync` is safer for updates. Would you like to overwrite it anyway? (y/n) ",
+            interactive,
+        )
+        if not should_write_readme and interactive:
+            print_info("Skipping README.md overwrite")
+
+    if should_write_manifest:
+        manifest_destination, manifest = write_manifest(snapshot, output_path=output_path, include_hashes=True)
+    if should_write_readme:
+        readme_destination, _ = write_readme(snapshot)
+
+    if interactive:
+        if initialized_repo:
+            print_success(f"Initialized git repository: {repo_root / '.git'}")
+        if created_files:
+            print_success(f"Scaffolded {len(created_files)} default example file(s)")
+        if manifest_destination is not None:
+            print_success(f"Wrote manifest: {manifest_destination}")
+        if readme_destination is not None:
+            print_success(f"Wrote README: {readme_destination}")
+        if manifest is not None:
+            print_info(
+                f"Indexed {len(manifest.get('entities', []))} entities, "
+                f"{len(manifest.get('transforms', []))} transforms, "
+                f"and {len(manifest.get('file_hashes', {}))} hashed files"
+            )
+    else:
+        if manifest is not None:
+            print(json.dumps(manifest, indent=2))
+    print_info("If you want to share your plugins with the OSINTBuddy community in the marketplace, create a Github repo to add your git remote now: https://github.com/new")
+    return manifest or {}
+
+
+def sync_cmd(
+    plugins_path: str | None = None,
+    output_path: str | None = None,
+    interactive: bool = True,
+) -> dict[str, object]:
+    """Regenerate manifest.json and patch generated README metadata."""
+    snapshot = inspect_repo(plugins_path=plugins_path, include_hashes=True)
+    existing_manifest = load_existing_manifest(snapshot["repo_root"], output_path)
+    preserved_values = {
+        key: existing_manifest[key]
+        for key in ("id", "name", "license", "description", "author")
+        if existing_manifest.get(key) is not None
+    }
+    manifest_destination, manifest = write_manifest(
+        snapshot,
+        output_path=output_path,
+        include_hashes=True,
+        preserved_values=preserved_values,
+    )
+    readme_destination, _ = sync_readme(snapshot)
+
+    if interactive:
+        print_success(f"Wrote manifest: {manifest_destination}")
+        if readme_destination is not None:
+            print_success(f"Synced README metadata: {readme_destination}")
+        else:
+            print_info("README.md not found, skipped README sync")
+        print_info(
+            f"Indexed {len(manifest.get('entities', []))} entities, "
+            f"{len(snapshot.get('transforms', []))} transforms, "
+            f"and {len(manifest.get('file_hashes', {}))} hashed files"
+        )
+    else:
+        print(json.dumps(manifest, indent=2))
+
+    return manifest
+
+
 commands = {
-    "init": init_entities,
+    "init": init_cmd,
+    "sync": sync_cmd,
     "transform": run_transform,
     "transforms": list_transforms,
     "entities": list_entities,
@@ -587,7 +733,8 @@ def main() -> None:
         formatter_class=RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  ob init                               Download the default OSINTBuddy entities
+  ob init                               Generate manifest.json and README.md for the current repo
+  ob sync                               Regenerate manifest.json and sync README metadata
   ob entities                           List all entities
   ob transforms -L email                List transforms for email entity
   ob transform '{"entity": {...}}'      Run a transform
@@ -674,6 +821,10 @@ Examples:
         command(plugins_path=plugins_path, interactive=interactive)
     elif cmd_fn_key == "entities json":
         command(plugins_path=plugins_path)
+    elif cmd_fn_key == "init":
+        command(plugins_path=plugins_path, output_path=args.output, interactive=interactive)
+    elif cmd_fn_key == "sync":
+        command(plugins_path=plugins_path, output_path=args.output, interactive=interactive)
     elif cmd_fn_key == "transforms":
         if not label:
             print_error("Missing entity label (-L)", code="MISSING_ARGUMENT")

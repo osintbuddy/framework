@@ -22,6 +22,8 @@ ob --help
 | `ob plugins`       | List all plugins                        |
 | `ob entities json` | Get entity information as JSON          |
 | `ob blueprints`    | Get entity blueprints                   |
+| `ob init`          | Generate `manifest.json` and `README.md` |
+| `ob sync`          | Regenerate `manifest.json` and sync README metadata |
 | `ob compile`       | Compile JSON entities to Python         |
 
 ---
@@ -289,6 +291,66 @@ Output:
   ]
 }
 ```
+
+---
+
+## `ob init`
+
+Generate `manifest.json` and `README.md` for the current plugin repository.
+
+```bash
+ob init [OPTIONS]
+```
+
+### Options
+
+| Option               | Description                                                |
+| -------------------- | ---------------------------------------------------------- |
+| `-P, --plugins PATH` | Plugin repository root                                     |
+| `-O, --output PATH`  | Output path for the generated manifest                     |
+| `--no-interactive`   | Print the generated manifest JSON instead of rich status messaging  |
+
+### Examples
+
+```bash
+# Generate manifest.json and README.md in the current repo
+ob init
+
+# Generate to a custom path
+ob init -O dist/manifest.json
+```
+
+`ob init` writes a fresh manifest and a fresh README from the same metadata graph.
+
+---
+
+## `ob sync`
+
+Regenerate `manifest.json` and patch generated metadata lines inside an existing `README.md` without overwriting developer-written content.
+
+```bash
+ob sync [OPTIONS]
+```
+
+### Options
+
+| Option               | Description                                                   |
+| -------------------- | ------------------------------------------------------------- |
+| `-P, --plugins PATH` | Plugin repository root                                        |
+| `-O, --output PATH`  | Output path for the generated manifest                         |
+| `--no-interactive`   | Print the generated manifest JSON instead of rich status messaging |
+
+### Examples
+
+```bash
+# Regenerate manifest.json and sync README metadata
+ob sync
+
+# Generate to a custom path
+ob sync -O dist/manifest.json
+```
+
+`ob sync` preserves curated `author`, `description`, and `license` values from the existing manifest and only updates specific generated metadata lines in `README.md` if that file already exists.
 
 ---
 
