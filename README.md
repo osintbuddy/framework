@@ -178,7 +178,7 @@ ob transform '{"label": "email", "version": "1.0.0", "transform": "to_domain", "
 # Get entity blueprints
 ob blueprints -L email
 
-# Generate marketplace metadata
+# Initialize a new plugins project
 ob init
 
 # Sync manifest and README metadata after repo changes
