@@ -190,7 +190,7 @@ ob compile entity.json -O entity.py
 
 ## Requirements
 
-- Python 3.12+
+- Python 3.13+
 
 ## License
 
